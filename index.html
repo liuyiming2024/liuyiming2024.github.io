@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>项目主页</title>
+<meta name="description" content="网页项目汇总：聊天室等自制小工具，纯前端零依赖。">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="logo" href="index.html">项目主页</a>
+    <div class="nav-links">
+      <a href="#projects">项目</a>
+      <a href="#about">关于本站</a>
+    </div>
+    <button class="icon-btn" id="btnTheme" title="切换深色 / 浅色">🌙</button>
+  </div>
+</nav>
+
+<div class="wrap">
+
+  <div class="hero">
+    <h1>项目主页</h1>
+    <p class="sub">这里汇总自己做的小项目和工具。想到什么就加什么。</p>
+    <div class="hero-btns">
+      <a class="btn btn-primary" href="#projects">看看项目 →</a>
+      <a class="btn btn-ghost" href="https://github.com/liuyiming2024" target="_blank" rel="noopener">GitHub</a>
+    </div>
+  </div>
+
+  <section id="projects">
+    <h2>项目</h2>
+    <div class="grid">
+
+      <a class="card" href="https://liuyiming2024.github.io/Chat/" target="_blank" rel="noopener">
+        <span class="card-icon">💬</span>
+        <h3>聊天室</h3>
+        <p>微信外观 + LaTeX 公式的网页聊天室。注册审核、细粒度权限、语音消息、贴吧与使用手册，纯前端零依赖。</p>
+      </a>
+
+      <a class="card" href="https://github.com/liuyiming2024/Chat" target="_blank" rel="noopener">
+        <span class="card-icon">📦</span>
+        <h3>聊天室 · 源码</h3>
+        <p>上面项目的 GitHub 仓库。MIT 协议，可自由使用、修改与二次分发。</p>
+      </a>
+
+    </div>
+    <div class="tags">
+      <span class="tag">纯前端</span>
+      <span class="tag">零依赖</span>
+      <span class="tag">GitHub Pages</span>
+      <span class="tag">MIT</span>
+    </div>
+  </section>
+
+  <section id="about">
+    <h2>关于本站</h2>
+    <div class="panel">
+      <p>本站用于集中展示各类项目，本身只是一个入口页——点上面的卡片即可进入对应项目。</p>
+      <p>所有项目均为手写前端代码，不依赖外部库与 CDN，可直接在浏览器运行，源码以 MIT 协议开放。</p>
+      <p>有新项目会继续往这里加。</p>
+      <div class="tags">
+        <span class="tag">HTML / CSS / JavaScript</span>
+        <span class="tag">Python</span>
+        <span class="tag">C++</span>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<div class="foot">
+  <div>项目主页 · 由 GitHub Pages 托管</div>
+  <div style="margin-top:4px">本站无外部依赖，离线亦可直接查看</div>
+</div>
+
+<script>
+(function () {
+  var KEY = 'home_theme';
+  function apply(t) {
+    var dark = t === 'dark' ||
+      (t !== 'light' && window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+    document.body.classList.toggle('dark', dark);
+    document.getElementById('btnTheme').textContent = dark ? '☀' : '🌙';
+  }
+  try { apply(localStorage.getItem(KEY) || 'auto'); } catch (e) { apply('auto'); }
+  document.getElementById('btnTheme').onclick = function () {
+    var t = document.body.classList.contains('dark') ? 'light' : 'dark';
+    try { localStorage.setItem(KEY, t); } catch (e) {}
+    apply(t);
+  };
+})();
+</script>
+</body>
+</html>

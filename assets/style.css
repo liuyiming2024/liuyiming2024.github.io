@@ -1,0 +1,89 @@
+/* ==================================================================
+ * 个人主页样式 —— 无外部依赖，全部使用系统字体
+ * ================================================================== */
+:root{
+  --brand:#3b7ff2; --brand-dark:#2f6ad6; --brand-soft:#eaf2ff;
+  --bg:#f4f6f9; --panel:#fff; --text:#1f2329; --dim:#6b7280;
+  --border:#e5e8ec; --radius:10px;
+}
+body.dark{
+  --brand:#4d8bf5; --brand-dark:#3b7ff2; --brand-soft:#1b2735;
+  --bg:#101216; --panel:#171a1f; --text:#e6e6e6; --dim:#9aa0a6;
+  --border:#2a2e35;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg); color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  font-size:15px; line-height:1.75; -webkit-text-size-adjust:100%;
+}
+a{color:var(--brand);text-decoration:none}
+a:hover{text-decoration:underline}
+code{background:var(--brand-soft);padding:1px 5px;border-radius:3px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.9em}
+
+/* 导航 */
+.nav{background:var(--panel);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:50}
+.nav-inner{max-width:1000px;margin:0 auto;padding:0 16px;height:56px;display:flex;align-items:center;gap:18px}
+.logo{font-size:16px;font-weight:700;color:var(--text);white-space:nowrap}
+.logo:hover{text-decoration:none}
+.nav-links{display:flex;gap:4px;flex:1}
+.nav-links a{padding:6px 12px;border-radius:6px;color:var(--text);font-size:14px}
+.nav-links a:hover{background:var(--brand-soft);text-decoration:none}
+.icon-btn{border:1px solid var(--border);background:var(--panel);color:var(--text);border-radius:6px;
+  width:32px;height:32px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center}
+.icon-btn:hover{border-color:var(--brand);color:var(--brand)}
+
+/* 容器 */
+.wrap{max-width:1000px;margin:0 auto;padding:28px 16px 60px}
+section{margin-bottom:38px;scroll-margin-top:70px}
+h2{font-size:20px;margin:0 0 14px;padding-left:10px;border-left:4px solid var(--brand)}
+
+/* Hero */
+.hero{background:linear-gradient(135deg,var(--brand),#2f6ad6);color:#fff;
+  border-radius:14px;padding:48px 34px;margin-bottom:34px}
+.hero h1{margin:0 0 8px;font-size:32px;line-height:1.35}
+.hero .sub{margin:0 0 18px;opacity:.93;font-size:15.5px}
+.hero-btns{display:flex;gap:10px;flex-wrap:wrap}
+.btn{display:inline-block;padding:9px 20px;border-radius:6px;font-size:14px;cursor:pointer;transition:.15s}
+.btn:hover{text-decoration:none;opacity:.9}
+.btn-primary{background:#fff;color:var(--brand);font-weight:600}
+.btn-ghost{background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.4)}
+
+/* 卡片 */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);
+  padding:18px;transition:.15s;display:block;color:inherit}
+.card:hover{border-color:var(--brand);transform:translateY(-2px);text-decoration:none}
+.card h3{margin:0 0 6px;font-size:15.5px}
+.card p{margin:0;font-size:13.5px;color:var(--dim);line-height:1.65}
+.card-icon{font-size:22px;margin-bottom:8px;display:block}
+
+/* 标签 */
+.tags{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.tag{background:var(--brand-soft);color:var(--brand);padding:4px 12px;border-radius:14px;font-size:13px}
+
+/* 关于 */
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:22px}
+.panel p{margin:0 0 12px}
+.panel p:last-child{margin-bottom:0}
+
+/* 时间线 */
+.timeline{border-left:2px solid var(--border);padding-left:18px;margin-left:6px}
+.tl-item{position:relative;padding-bottom:18px}
+.tl-item::before{content:'';position:absolute;left:-25px;top:7px;width:10px;height:10px;
+  border-radius:50%;background:var(--brand);border:2px solid var(--panel)}
+.tl-date{font-size:12.5px;color:var(--dim)}
+.tl-title{font-weight:600;font-size:15px;margin:1px 0 2px}
+.tl-desc{font-size:13.5px;color:var(--dim)}
+
+/* 页脚 */
+.foot{border-top:1px solid var(--border);background:var(--panel);
+  padding:26px 16px;text-align:center;color:var(--dim);font-size:13px}
+.foot a{color:var(--dim)}
+
+@media(max-width:720px){
+  .nav-inner{gap:10px;height:52px}
+  .hero{padding:32px 20px}
+  .hero h1{font-size:24px}
+  .wrap{padding:18px 12px 40px}
+}
