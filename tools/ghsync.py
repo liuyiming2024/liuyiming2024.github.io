@@ -23,7 +23,7 @@ ghsync.py —— GitHub 差值同步工具
     --branch NAME          默认 main
     --root  DIR            默认脚本所在目录的上级（即仓库根）
     --include-workflows    一并处理 .github/workflows/（需要 token 带 workflow 权限）
-    --no-delete            只增改，不删除线上多出的文件
+    --delete               允许删除线上多出的文件（默认关闭，防误删）
 """
 import json, urllib.request, urllib.error, ssl, os, sys, hashlib, base64
 
@@ -32,15 +32,38 @@ argv = sys.argv[1:]
 def opt(name, default=None):
     return default if name not in argv else (argv[argv.index(name) + 1] if argv.index(name) + 1 < len(argv) else default)
 
-REPO   = opt('--repo', 'liuyiming2024/Chat')
+def detect_repo(root):
+    """从 .git/config 的 remote.origin.url 推断 owner/name。
+    推断不到返回 None——此时必须显式给 --repo，避免推错仓库。"""
+    import re as _re
+    cfg = os.path.join(root, '.git', 'config')
+    if not os.path.exists(cfg): return None
+    try:
+        txt = io.open(cfg, encoding='utf-8', errors='replace').read()
+        m = _re.search(r'url\s*=\s*(.+?)\s*$', txt, _re.M)
+        if not m: return None
+        u = m.group(1)
+        for pat in (r'github\.com[:/](.+?)/(.+?)(?:\.git)?$', r'github\.com[:/](.+?)/(.+)$'):
+            mm = _re.search(pat, u)
+            if mm: return mm.group(1) + '/' + mm.group(2)
+    except Exception:
+        pass
+    return None
+
 BRANCH = opt('--branch', 'main')
 ROOT   = opt('--root', os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 DRY    = '--dry' in argv
 YES    = '--yes' in argv
-NODEL  = '--no-delete' in argv
+DODEL  = '--delete' in argv   # 删除必须显式开启，默认绝不删
 WF     = '--include-workflows' in argv
 MSG    = opt('--msg', None)
 
+REPO = opt('--repo') or detect_repo(ROOT)   # 必须在 ROOT 之后
+
+if not REPO:
+    print('无法自动确定目标仓库：目录下没有 .git，或 .git/config 里读不出 GitHub 远程地址。')
+    print('请显式指定，例如：--repo liuyiming2024/Chat')
+    sys.exit(1)
 OWNER, REPON = REPO.split('/')
 TOKEN = os.environ.get('GHTOK') or os.environ.get('GITHUB_TOKEN')
 if not TOKEN:
@@ -83,7 +106,9 @@ for dp, dns, fns in os.walk(ROOT):
             with open(fp, 'rb') as f:
                 local[rel] = f.read()
         except Exception as e:
-            print('  跳过（读取失败）', rel, e)
+            print('\n致命：文件读取失败 —— %s (%s)' % (rel, e))
+            print('读取失败的文件不会被计入本地清单，若继续会被误判为"线上多出"而删除。已中止。')
+            sys.exit(1)
 
 # ---------------- 线上文件 ----------------
 code, ref = api('/repos/%s/%s/git/ref/heads/%s' % (OWNER, REPON, BRANCH))
@@ -94,6 +119,10 @@ head_sha = ref['object']['sha']
 code, tree = api('/repos/%s/%s/git/trees/%s?recursive=1' % (OWNER, REPON, BRANCH))
 if code != 200:
     print('读取文件树失败', code, tree); sys.exit(1)
+if tree.get('truncated'):
+    print('\n致命：线上文件树被截断（truncated），读到的是不完整清单。')
+    print('此时比对出的"删除项"不可信，已中止。请缩小仓库规模或改用逐目录查询。')
+    sys.exit(1)
 remote = {t['path']: t['sha'] for t in tree.get('tree', []) if t['type'] == 'blob'}
 
 # ---------------- 比对 ----------------
@@ -103,7 +132,7 @@ for p, data in sorted(local.items()):
         add.append(p)
     elif git_blob_sha(data) != remote[p]:
         mod.append(p)
-if not NODEL:
+if DODEL:
     dele = sorted(set(remote) - set(local))
 
 total_bytes = sum(len(local[p]) for p in add + mod)
@@ -171,7 +200,15 @@ code, c = api('/repos/%s/%s/git/commits' % (OWNER, REPON), 'POST',
 if code not in (200, 201):
     print('commit 失败', code, str(c)[:400]); sys.exit(1)
 
-code, u = api('/repos/%s/%s/git/refs/heads/%s' % (OWNER, REPON, BRANCH), 'PATCH', {'sha': c['sha']})
+# 提交期间线上若有新提交，说明我们基于的 head 已过期，直接覆盖会丢别人的改动
+code, now_ref = api('/repos/%s/%s/git/refs/heads/%s' % (OWNER, REPON, BRANCH))
+if code == 200 and now_ref.get('object', {}).get('sha') != head_sha:
+    print('\n中止：提交期间线上分支已被更新（%s -> %s）。' % (head_sha[:10], now_ref['object']['sha'][:10]))
+    print('为避免覆盖他人改动，未移动分支指针。请重新拉取后再试。')
+    sys.exit(1)
+
+code, u = api('/repos/%s/%s/git/refs/heads/%s' % (OWNER, REPON, BRANCH), 'PATCH',
+              {'sha': c['sha'], 'force': False})
 if code != 200:
     print('更新分支失败', code, str(u)[:300]); sys.exit(1)
 
