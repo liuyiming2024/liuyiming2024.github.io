@@ -87,3 +87,62 @@ h2{font-size:20px;margin:0 0 14px;padding-left:10px;border-left:4px solid var(--
   .hero h1{font-size:24px}
   .wrap{padding:18px 12px 40px}
 }
+
+
+/* ================= 线性图标 =================
+ * 换掉 emoji：跨平台渲染不一致、深色模式下部分 emoji 自带颜色不跟主题变。
+ * 本页的深色变量与 Chat 项目不是同一套，所以显式给 --icon 兜底，
+ * 不纯靠继承父元素文字色 —— 否则深色下图标可能过暗看不见。 */
+:root { --icon: #3b7ff2; }
+body.dark { --icon: #7db3ff; }
+
+.ic {
+  width: 20px; height: 20px;
+  display: inline-block;
+  vertical-align: middle;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.ic-sm { width: 16px; height: 16px; }
+.ic-lg { width: 22px; height: 22px; }
+.ic-fill { fill: currentColor; stroke: none; }
+
+.card-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--icon);
+  margin-bottom: 8px;
+}
+.card-icon .ic { width: 20px; height: 20px; }
+
+.icon-btn { display: inline-flex; align-items: center; justify-content: center; }
+.icon-btn .ic { width: 18px; height: 18px; }
+
+
+/* 卡片：整张可点，但原来没有任何可点的暗示 */
+.card-main { position: relative; }
+.card-hit { display: block; color: inherit; text-decoration: none; }
+.card-src { z-index: 2; }
+.card-link {
+  display: inline-block;
+  margin-top: 10px;
+  color: var(--icon);
+  font-size: 13px;
+  font-weight: 600;
+}
+.card-src {
+  position: absolute;
+  right: 12px; bottom: 12px;
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 12px; color: #888; text-decoration: none;
+  padding: 3px 8px; border-radius: 4px;
+}
+.card-src:hover { background: rgba(0,0,0,.06); color: var(--icon); }
+body.dark .card-src:hover { background: rgba(255,255,255,.08); }
+.card-src .ic { width: 14px; height: 14px; }
+.card:hover { transform: translateY(-2px); }
