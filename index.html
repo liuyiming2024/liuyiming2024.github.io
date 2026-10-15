@@ -149,7 +149,15 @@
 <div class="foot">
   <div>项目主页 · 由 GitHub Pages 托管</div>
   <div style="margin-top:4px">本站无外部依赖，离线亦可直接查看</div>
+  <!-- ENTRY-ARCHIVE：隐蔽触发点。连点这一行 5 次（或按 Ctrl+Shift+A）唤出入口。
+       它本身不带任何文字提示 —— 入口的意义就在于"别人不知道它在"。 -->
+  <div id="footGate" style="margin-top:4px;cursor:default;user-select:none"
+       title="项目主页 · 由 GitHub Pages 托管">·</div>
 </div>
+
+<!-- ENTRY-ARCHIVE：档案入口按钮。默认不存在于页面结构里，
+     由 JS 在口令通过后动态插入。 -->
+<div id="archiveSlot"></div>
 
 <script>
 (function () {
@@ -167,6 +175,111 @@
     try { localStorage.setItem(KEY, t); } catch (e) {}
     apply(t);
   };
+})();
+
+/* ============================================================
+   ENTRY-ARCHIVE：档案入口（默认隐藏）
+   ------------------------------------------------------------
+   站长要求：主页那个入口默认隐藏，鉴定为站长后才出现，点了跳 Archive。
+
+   ⚠⚠ 必须说清的三件事，否则会误以为这层是安全措施：
+   ① 这里是**公开仓库**。所以页面里**不能出现任何密钥、口令、明文或哈希**——
+      写了就等于公开。口令哈希只存站长自己浏览器的 localStorage，
+      换设备 / 清数据后需要重新设置（这是代价，也是它不进公开库的理由）。
+   ② 主页这层只做到「不显眼 + 本地口令」，**不是真正的鉴权**。
+      纯静态页没有任何服务端，绕过它不需要什么技术。
+      **真正的门在 Archive 那边，必须自己再鉴一次** ——
+      两道门各自独立，不能因为主页验过就跳过（这跟 Chat 的两级鉴权同源）。
+   ③ 忘了口令没有找回途径（没有服务端可问）。这是刻意的：
+      有找回途径就意味着某处存着能还原的东西，那就又成了可泄露的 secret。
+   ============================================================ */
+(function () {
+  var ARCHIVE_URL = 'https://liuyiming2024.github.io/Archive/';
+  var HASH_KEY = 'archive_gate_hash';
+  var gate = document.getElementById('footGate');
+  var slot = document.getElementById('archiveSlot');
+  if (!gate || !slot) return;
+
+  function sha256(text) {
+    if (window.crypto && crypto.subtle && crypto.subtle.digest) {
+      return crypto.subtle.digest('SHA-256', new TextEncoder().encode(text))
+        .then(function (buf) {
+          return Array.prototype.map.call(new Uint8Array(buf), function (b) {
+            return ('0' + b.toString(16)).slice(-2);
+          }).join('');
+        });
+    }
+    /* Web Crypto 只在 https / localhost 下可用（file:// 下为 undefined）。
+       拿不到就不能安全地存口令 —— 此时**明确提示并停手**，
+       不要退回自己写的哈希：自造哈希看着能用，实际等于明文存口令。 */
+    return Promise.reject(new Error('no-webcrypto'));
+  }
+
+  function showEntry() {
+    if (document.getElementById('btnArchive')) return;
+    var a = document.createElement('a');
+    a.id = 'btnArchive';
+    a.className = 'card-src';
+    a.href = ARCHIVE_URL;
+    a.target = '_blank';
+    a.rel = 'noopener';
+    a.textContent = '档案';
+    a.style.cssText = 'display:inline-block;margin:8px 0;padding:8px 14px;'
+      + 'border:1px solid currentColor;border-radius:8px;text-decoration:none';
+    slot.appendChild(a);
+  }
+
+  function ask(promptText, isPassword) {
+    return new Promise(function (resolve) {
+      var v = window.prompt(promptText);
+      resolve(v);
+    });
+  }
+
+  function setup() {
+    alert('首次使用档案入口，需要设置一个本机口令。\n\n'
+      + '· 这个口令只保存在你这台设备的浏览器里，不会上传到任何地方\n'
+      + '· 换设备或清除浏览器数据后需要重新设置\n'
+      + '· 忘了无法找回（没有服务端可问，这是刻意的）');
+    var p1 = ask('设置档案入口口令（至少 6 位）：');
+    if (!p1 || p1.length < 6) { alert('口令太短，已取消'); return; }
+    var p2 = ask('再输入一次确认：');
+    if (p1 !== p2) { alert('两次不一致，已取消'); return; }
+    sha256(p1).then(function (h) {
+      localStorage.setItem(HASH_KEY, h);
+      alert('已设置。以后用这个口令唤出入口。');
+      showEntry();
+    }).catch(function () { alert('当前环境不支持安全存储（需 https），已取消'); });
+  }
+
+  function unlock() {
+    var saved = localStorage.getItem(HASH_KEY);
+    if (!saved) { setup(); return; }
+    var v = ask('档案入口口令：');
+    if (!v) return;
+    sha256(v).then(function (h) {
+      if (h === saved) {
+        showEntry();
+      } else {
+        /* 不对就只是"不出现"，不提示哪里错了 ——
+           提示"口令错误"等于确认了入口存在。 */
+      }
+    }).catch(function () { alert('当前环境不支持安全存储（需 https）'); });
+  }
+
+  var taps = 0, tapTimer = null;
+  gate.addEventListener('click', function () {
+    taps++;
+    clearTimeout(tapTimer);
+    tapTimer = setTimeout(function () { taps = 0; }, 1500);
+    if (taps >= 5) { taps = 0; unlock(); }
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (e.ctrlKey && e.shiftKey && (e.key === 'A' || e.key === 'a')) {
+      e.preventDefault(); unlock();
+    }
+  });
 })();
 </script>
 </body>
