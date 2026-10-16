@@ -78,6 +78,9 @@
       <a href="#projects">项目</a>
       <a href="#about">关于本站</a>
     </div>
+    <!-- Q-Site-S-121：跨项目统一账号区。
+         内容由 assets/account.js 填充（读取与聊天室同源的会话令牌）。 -->
+    <div id="acctHost" class="acct-host"></div>
     <button class="icon-btn" id="btnTheme" title="切换深色 / 浅色" aria-label="切换深色 / 浅色"><svg class="ic" aria-hidden="true"><use href="#i-moon"/></svg></button>
   </div>
 </nav>
@@ -159,6 +162,9 @@
      由 JS 在口令通过后动态插入。 -->
 <div id="archiveSlot"></div>
 
+<!-- Q-Site-S-121：账号区脚本放在 Chat 仓库（账号系统归它所有），
+     主页这边通过同源绝对链接引用 —— 只有一份实现，不会两边漂移。 -->
+<script src="https://liuyiming2024.github.io/Chat/assets/account.js"></script>
 <script>
 (function () {
   var KEY = 'home_theme';

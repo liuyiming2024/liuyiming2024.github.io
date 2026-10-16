@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>正在跳转…</title>
+<style>
+  body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
+       font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+       background:#f5f5f5;color:#191919}
+  .box{text-align:center;padding:32px}
+  .sp{width:22px;height:22px;border:2px solid #d0d0d0;border-top-color:#3b7ff2;
+      border-radius:50%;margin:0 auto 14px;animation:r .7s linear infinite}
+  @keyframes r{to{transform:rotate(360deg)}}
+  a{color:#3b7ff2}
+  .hint{margin-top:14px;font-size:13px;color:#8c8c8c;line-height:1.7}
+</style>
+</head>
+<body>
+<div class="box">
+  <div class="sp" id="sp"></div>
+  <div id="msg">正在跳转…</div>
+  <div class="hint" id="hint" hidden>
+    没有自动跳转？<a id="link" href="./">点这里继续</a>
+  </div>
+</div>
+<script>
+/* ================================================================
+   404.html —— 路径大小写归一化（Q-Site-S-121）
+
+   背景：GitHub Pages 的路径**大小写敏感**。
+     https://liuyiming2024.github.io/Chat/      ✅ 能开
+     https://liuyiming2024.github.io/chat/      ❌ 404
+   而用户手打、聊天软件里传链接、二维码扫描，几乎必然会出现小写。
+   于是"链接发过去对方打不开"成了常态，且对方只会以为链接坏了。
+
+   原理：GitHub Pages 对本仓库未匹配的路径会**渲染 404.html**
+   （状态码仍是 404，但内容会执行）。这里的脚本读取 location.pathname，
+   与已知项目名做大小写不敏感匹配，命中就用 location.replace 跳到正确路径。
+
+   ⚠⚠ 三条硬约束，改这个文件时必须守住：
+
+   1. **只跳白名单**。映射表是写死的，绝不拿用户输入直接拼路径。
+      否则这就是一个开放重定向：/404.html 能跳到任意 URL，
+      会被拿去做钓鱼（域名看着是你的，内容却是别人的）。
+
+   2. **保留子路径与查询串**。/chat/chat/index.html 要跳到
+      /Chat/chat/index.html，不能把后面半截丢掉 ——
+      丢了就变成"跳了但还是打不开"，比不跳更让人困惑。
+
+   3. **失败要给人看得见的出路**。脚本出错、或压根没命中映射表时，
+      必须显示一个可点的返回链接，不能留一张永远转圈的空白页。
+      上面 .hint 默认隐藏，只在 3 秒后仍未跳转时才显示 ——
+      正常跳转瞬间完成，不该让用户看到这个提示。
+
+   另：仓库根路径不存在（比如 /archiveX/）时不跳，只给出返回主页的链接。
+   猜错路径比不跳更糟 —— 把人送到一个无关页面，他会以为进错了站。
+================================================================ */
+
+/* 小写 → 真实路径。值必须与仓库实际大小写完全一致，否则白跳一次。 */
+var MAP = {
+  'chat':    'Chat',
+  'code':    'Code',
+  'archive': 'Archive',
+  'assets':  'assets',
+  'tool':    'Tool',
+  'site':    'site'
+};
+
+function go() {
+  var p = location.pathname;
+  var q = location.search + location.hash;
+
+  /* ⚠ 不能 filter 掉空串再 join：那会吃掉尾斜杠。
+     /chat/ 本该跳到 /Chat/，丢了斜杠就变成 /Chat ——
+     GitHub Pages 会再 301 一次才到，多一跳不说，
+     路径里要是有目录，重定向还可能把相对资源路径算错。
+     所以按 '/' 原样切分，只替换第一个非空段。 */
+  var segs = p.split('/');                       // '/chat/' → ['', 'chat', '']
+  if (segs.length < 2 || segs[1] === '') { fallback('./'); return; }
+
+  var first = segs[1];
+  var real = MAP[first.toLowerCase()];
+
+  if (!real) { fallback('./'); return; }          // 不在白名单 → 只给返回主页
+  /* 大小写本就对却走到 404，说明是别的原因（文件真的不存在）。
+     这时不能再猜，只给返回链接 —— 把人送到无关页面比不跳更糟。 */
+  /* ⚠ 这里必须补回分隔符：slice(2) 已经把第一个 '/' 切掉了，
+     直接拼接会得到 './assetsstyle.css' —— 一个根本不存在的路径。
+     跳错比不跳更糟：用户看到的不是 404，而是一个莫名其妙的空页面。 */
+  if (real === first) {
+    fallback('./' + first + (segs.length > 2 ? '/' + segs.slice(2).join('/') : '') + q);
+    return;
+  }
+
+  segs[1] = real;
+  var target = '.' + segs.join('/') + q;
+  show(target);
+  location.replace(target);
+}
+
+/* 兜底：给出可点的返回链接。3 秒后才显示，避免正常跳转时闪一下。 */
+function fallback(href) {
+  show(href);
+  setTimeout(function () {
+    document.getElementById('sp').style.display = 'none';
+    document.getElementById('msg').textContent = '这个地址打不开';
+    document.getElementById('hint').hidden = false;
+    document.getElementById('hint').firstChild.textContent = '返回项目主页：';
+  }, 3000);
+}
+
+function show(href) {
+  var a = document.getElementById('link');
+  if (a && href) a.href = href;
+}
+
+try { go(); } catch (e) { fallback('./'); }
+</script>
+</body>
+</html>
