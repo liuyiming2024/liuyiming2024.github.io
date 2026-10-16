@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cloud Drive</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="wrap">
+
+  <h1><span class="dot"></span>Cloud Drive</h1>
+  <div class="sub">文件在离开这台浏览器之前就加密好了，之后它只是一段看不懂的字节。</div>
+
+  <div class="panel">
+    <label for="token">访问令牌（GitHub Personal Access Token）</label>
+    <div class="row2">
+      <div><input id="token" type="password" placeholder="github_pat_..." autocomplete="off"></div>
+      <button id="saveToken">存到本机</button>
+    </div>
+    <div class="hint">
+      只存在这台浏览器的 localStorage 里，不上传、不写进代码。它只需要能写这个公开仓库、
+      能触发一次工作流；真正能读写私有存储库的高权限令牌在仓库的 Actions Secrets 里，这个页面拿不到。
+    </div>
+
+    <div style="margin-top:12px">
+      <label for="pass">加密口令</label>
+      <input id="pass" type="password" placeholder="用来加密/解密文件，忘了就再也打不开" autocomplete="new-password">
+      <div class="hint">口令不上传、不存储。忘记口令 = 文件永久作废，没有任何找回通道。</div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <label>上传</label>
+    <input id="pick" type="file" multiple>
+    <div id="picked" style="margin-top:6px"><span class="dim">还没选文件</span></div>
+    <div style="margin-top:10px">
+      <button id="upload" class="primary">加密并存储</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="row2" style="margin-bottom:8px">
+      <div><label style="margin:0">存储目录</label></div>
+      <button id="refresh">刷新</button>
+    </div>
+    <div id="list"><div class="dim">点「刷新」载入</div></div>
+  </div>
+
+  <div class="panel">
+    <label>过程</label>
+    <div id="log"></div>
+    <details>
+      <summary>它是怎么存的？</summary>
+      <p>1. 你的文件在浏览器里用口令做 AES-GCM 加密，分块处理，每块带独立的随机 nonce 和块序号校验。</p>
+      <p>2. 密文写进一个<strong>公开</strong>仓库的暂存区。公开也没关系——那里从头到尾只有密文。</p>
+      <p>3. 页面敲一下 GitHub Actions，它把密文从暂存区搬进<strong>私有</strong>存储库，然后清掉暂存区。</p>
+      <p>4. 私有库的地址和那枚高权限令牌只存在于 Actions 的 Secrets 里。这个页面的任何一行代码都不知道它们。</p>
+      <p>已知代价：GitHub 单文件上限 100MB，仓库总量建议控制在 1GB 以内；
+      更大的文件会自动改走 Release 资产通道（单文件 2GB）。上传下载都要等 Actions 跑一趟，通常几十秒。</p>
+    </details>
+  </div>
+
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/crypto.js"></script>
+<script src="js/api.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
