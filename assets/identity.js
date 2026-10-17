@@ -212,9 +212,16 @@
     return rpc('user_review', { p_user: userId, p_status: status });
   }
 
-  /* ---------------- 跨项目权限（Q-Chat-S-124） ----------------
+  /* ---------------- 权限（Q-Chat-S-125，已并入统一 ACL） ----------------
      权限升到集群层：能不能用某个项目，不该取决于你在哪个项目里问。
-     对外就是这一个函数，两个参数，返回状态值。 */
+
+     ⚠⚠ 这里是**前端查询**，不是闸门。
+        真正的闸门在服务端：各项目在自己的 RPC 函数里
+        `perform acl_require('drive.use');` —— 被拒绝直接抛异常、
+        事务回滚，操作根本不会发生。
+        前端判定永远可以被绕过（改 localStorage、直接发请求都行），
+        所以它只能用来决定"要不要显示这个按钮"，
+        **不能当作安全边界**。 */
 
   /**
    * 判定某个用户有没有某项跨项目权限。
@@ -237,20 +244,14 @@
    *   真正的闸门在各项目自己服务端的 if 判断里。
    */
   function can(perm, user) {
-    return rpc('site_can', { p_perm: perm, p_user: user || state.id })
-      .then(function (r) { return r; });
-  }
-
-  /** 手上只有昵称时用这个 */
-  function canNick(perm, nick) {
-    return rpc('site_can_nick', { p_perm: perm, p_nick: nick });
+    return rpc('acl_can', { p_perm: perm, p_room: null, p_user: user || null });
   }
 
   /** 按名字取判定函数，读起来更顺：SI.perm('drive.use') */
   function perm(permName, user) { return can(permName, user); }
 
   /** 权限点清单（按项目分组）。仅管理员/站长可用。 */
-  function listPerms() { return rpc('site_perms_list', {}); }
+  function listPerms() { return rpc('acl_perms_list', {}); }
 
   /**
    * 上传头像到公共 storage。
@@ -466,7 +467,6 @@
     register: register,
     logout: logout,
     can: can,
-    canNick: canNick,
     perm: perm,
     listPerms: listPerms,
     profileUpdate: profileUpdate,

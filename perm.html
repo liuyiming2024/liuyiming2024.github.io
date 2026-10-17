@@ -91,12 +91,13 @@
     <div class="pm-card">
       <h2 class="pm-h">判定自测</h2>
       <p class="pm-sub">
-        调 <code>site_can(权限条目, 用户)</code>，返回状态值。
+        调 <code>acl_why(权限, 房间, 用户)</code> 看状态；
+        真正的闸门是服务端 <code>acl_require</code>。
         新增项目、改权限后在这里直接验，不用打开控制台。
       </p>
       <div class="test-row">
         <select class="field" id="tPerm"></select>
-        <input class="field" id="tUser" placeholder="昵称（留空=我自己）" style="flex:1;min-width:140px">
+        <select class="field" id="tUser" style="flex:1;min-width:140px"></select>
         <button class="btn-primary" id="btnTest">判定</button>
       </div>
       <div id="res"></div>
@@ -111,7 +112,8 @@
       </div>
       <div class="note">
         ⚠ 这里只是"要不要显示按钮"的参考，<b>不是闸门</b>。
-        真正的闸门在各项目自己服务端的判断里 —— 前端判定永远可以被绕过。
+        真正的闸门是各项目在自己 RPC 里调 <code>perform acl_require(...)</code> ——
+        被拒绝直接抛异常、事务回滚。前端判定永远可以被绕过。
       </div>
     </div>
 
@@ -121,7 +123,7 @@
 <script src="assets/identity.js"></script>
 <script>
 /* ================================================================
-   perm.html —— 集群层权限页（Q-Chat-S-124）
+   perm.html —— 集群层权限页（Q-Chat-S-125）
 
    为什么在主页而不是项目里：
      权限升到集群层了 —— "能不能用云盘"这种问题的答案，
@@ -247,6 +249,14 @@
     });
   }
 
+  /* 昵称 → uuid。昵称版端点已并入 acl_can 三参数，
+     前端需要先换出 id。查不到就传 null（判定自己）。 */
+  var nickMap = {};
+  function nickUid(nick) {
+    if (!nick) return null;
+    return nickMap[nick.toLowerCase()] || null;
+  }
+
   function bind() {
     $('btnTest').onclick = function () {
       var b = this;
@@ -256,7 +266,7 @@
       b.disabled = true; b.textContent = '判定中…';
       $('res').innerHTML = '';
 
-      var p = nick ? SI.canNick(key, nick) : SI.can(key);
+      var p = SI.can(key, nickUid(nick));
       p.then(function (st) {
         var s = STATE[st] || { cls: 'res-unknown', text: '未知状态：' + st };
         var d = document.createElement('div');
@@ -277,10 +287,7 @@
       });
     };
 
-    /* 回车提交 */
-    $('tUser').addEventListener('keydown', function (e) {
-      if (e.key === 'Enter') $('btnTest').click();
-    });
+
   }
 
   SI.ready.then(function (st) {
@@ -310,6 +317,21 @@
       perms = r.perms || [];
       drawList(perms);
       fillSelect(perms);
+      /* 用户下拉：管理员才能列全部（user_list 服务端已限制） */
+      SI.listUsers().then(function (ur) {
+        var sel = $('tUser');
+        sel.innerHTML = '';
+        var o0 = document.createElement('option');
+        o0.value = ''; o0.textContent = '（我自己）';
+        sel.appendChild(o0);
+        ((ur && ur.users) || []).forEach(function (u) {
+          nickMap[u.nick.toLowerCase()] = u.id;
+          var o = document.createElement('option');
+          o.value = u.id;
+          o.textContent = u.nick + (u.role === 'owner' ? ' · 站长' : (u.role === 'admin' ? ' · 管理员' : ''));
+          sel.appendChild(o);
+        });
+      }).catch(function () { });
     }).catch(function (e) {
       $('permList').innerHTML = '<div class="empty">加载失败：' +
         (e && e.message ? e.message : '网络错误') + '</div>';
