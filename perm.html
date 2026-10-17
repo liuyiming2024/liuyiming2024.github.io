@@ -82,6 +82,9 @@
       <p class="pm-sub">
         按项目分组。<b>删掉某个项目时，整组删掉即可</b>，其余项目不受影响。
         权限点命名规则是 <code>项目.动作</code>。
+        <!-- 补充说明：分组名用英文 key 而非中文名，
+             是因为本页公开，私有项目的中文名不能出现在源码里。 -->
+        中文说明取服务端返回的 label。
       </p>
       <div id="permList"><div class="empty">加载中…</div></div>
       <div class="msg msg-err" id="lMsg"></div>
@@ -169,7 +172,7 @@
       h.className = 'grp-h';
       var nm = document.createElement('span');
       nm.className = 'grp-name';
-      nm.textContent = PROJ_NAME[proj] || proj;
+      nm.textContent = proj;
       h.appendChild(nm);
       var kk = document.createElement('span');
       kk.className = 'grp-key';
@@ -227,7 +230,17 @@
     });
   }
 
-  var PROJ_NAME = { drive: '云盘', archive: '档案', code: '代码', chat: '聊天室' };
+  /* ⚠⚠ 这里**不能**硬编码项目中文名（Q-Chat-S-126）。
+     本文件是公开静态页 —— 就算权限点列表要登录才拉得到，
+     这样一行常量在未登录时查看源码就能看到：
+       项目中文名 = { 某私有项目: '它的中文名' }
+     等于把"存在一个私有项目、它叫什么"直接写在门口。
+
+     ⚠ 而我在写这段说明时，**第一版就在注释里把真实项目名原样抄了一遍** ——
+       注释同样在源码里，照样可见。等于一边说不能写、一边写了。
+       所以这里只写占位描述，真实名字一律不落进本文件。
+     私有项目的名字不能出现在公开页面的源码里，
+     所以分组标题直接用 project 的 key，中文名走服务端返回的 label。 */
 
   function copy(text) {
     if (navigator.clipboard && navigator.clipboard.writeText) {

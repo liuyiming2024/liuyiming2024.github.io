@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>使用手册 · 全站</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%233b7ff2'/%3E%3Cpath d='M8 11h16M8 16h11' stroke='%23fff' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+  /* 本页只加"栏目分组"与"卡片列表"两类样式，
+     配色一律复用 assets/style.css —— 换主题时手册必须跟着变，
+     否则从主页点进来颜色突变，看着像跳到了别的站。 */
+  .doc-wrap { max-width: 900px; margin: 0 auto; padding: 24px 16px 48px; }
+  .doc-lead { font-size: 14px; color: var(--dim); line-height: 1.8; margin: 0 0 24px; }
+
+  /* 栏目：按项目分。★ 这是"统一界面 + 分栏目"的核心 ——
+     每个项目一个 section，项目下线时整段删掉，其余不受影响。 */
+  .sec { margin-bottom: 30px; }
+  .sec-h { display: flex; align-items: baseline; gap: 9px;
+           padding-bottom: 8px; border-bottom: 1px solid var(--border); margin-bottom: 14px; }
+  .sec-name { font-size: 15px; font-weight: 600; }
+  .sec-tag { font-size: 11px; padding: 2px 8px; border-radius: 4px;
+             background: var(--brand-soft); color: var(--brand-dark); }
+  .sec-tag-planned { background: transparent; border: 1px solid var(--border); color: var(--dim); }
+  .sec-key { font-size: 11px; color: var(--dim); font-family: ui-monospace, monospace; }
+
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
+  .card { display: block; padding: 13px 15px; border: 1px solid var(--border);
+          border-radius: var(--radius); background: var(--panel);
+          text-decoration: none; color: inherit; }
+  .card:hover { border-color: var(--brand); }
+  .card-t { font-size: 14px; font-weight: 500; margin-bottom: 3px; }
+  .card-d { font-size: 12px; color: var(--dim); line-height: 1.6; }
+
+  /* 外部项目手册：标出来，让用户知道会跳到别处 */
+  .card-ext .card-t::after {
+    content: '↗'; font-size: 11px; color: var(--dim); margin-left: 5px;
+  }
+
+  .note { font-size: 13px; color: var(--dim); line-height: 1.8;
+          background: var(--bg); border-left: 3px solid var(--border);
+          padding: 10px 14px; border-radius: 0 6px 6px 0; }
+  .note code { font-family: ui-monospace, monospace; }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="logo" href="../index.html">项目主页</a>
+    <div class="nav-links"><a href="../index.html">返回首页</a></div>
+    <div id="acctHost" class="acct-host"></div>
+  </div>
+</nav>
+
+<div class="doc-wrap">
+  <h1 style="font-size:22px;margin:0 0 6px">使用手册</h1>
+  <p class="doc-lead">
+    按项目分栏目。账号与权限是<b>全站共用</b>的，单独一栏在最上面 ——
+    在一个地方登录、一个地方配权限，各项目通用。
+  </p>
+
+  <!-- ── 集群层：账号与权限 ──────────────────────────────────
+       ★ 排最前，因为它是跨项目的：不管你要用哪个项目，
+         先得有账号、有权限。放最后的话新用户会先钻进某个
+         项目的手册，卡在"登录不了"上而不知道问题在别处。 -->
+  <section class="sec">
+    <div class="sec-h">
+      <span class="sec-name">账号与权限</span>
+      <span class="sec-tag">全站共用</span>
+      <span class="sec-key">site</span>
+    </div>
+    <div class="cards">
+      <a class="card" href="../login.html">
+        <div class="card-t">登录</div>
+        <div class="card-d">全站唯一的登录入口。任何项目需要登录都会跳转到这里。</div>
+      </a>
+      <a class="card" href="../account.html">
+        <div class="card-t">账号设置</div>
+        <div class="card-d">头像、昵称、简介、修改密码。审核注册申请也在这里。</div>
+      </a>
+      <a class="card" href="../perm.html">
+        <div class="card-t">权限配置</div>
+        <div class="card-d">跨项目权限点，按项目分组。仅站长与管理员可见。</div>
+      </a>
+    </div>
+  </section>
+
+  <!-- ── 聊天室 ─────────────────────────────────────────── -->
+  <section class="sec">
+    <div class="sec-h">
+      <span class="sec-name">聊天室</span>
+      <span class="sec-tag">Chat</span>
+      <span class="sec-key">chat</span>
+    </div>
+    <div class="cards">
+      <a class="card card-ext" href="../Chat/docs/getting-started.html">
+        <div class="card-t">新手入门</div>
+        <div class="card-d">注册、进群、发消息、@ 提醒。第一次用先看这个。</div>
+      </a>
+      <a class="card card-ext" href="../Chat/docs/markdown.html">
+        <div class="card-t">Markdown 与公式</div>
+        <div class="card-d">支持的语法、LaTeX 公式写法、代码块高亮。</div>
+      </a>
+      <a class="card card-ext" href="../Chat/docs/permissions.html">
+        <div class="card-t">权限与命令</div>
+        <div class="card-d">房间内权限点说明与斜杠命令。</div>
+      </a>
+      <a class="card card-ext" href="../Chat/docs/admin.html">
+        <div class="card-t">管理员手册</div>
+        <div class="card-d">审核、封禁、置顶、公告、导出。</div>
+      </a>
+      <a class="card card-ext" href="../Chat/docs/client.html">
+        <div class="card-t">客户端下载</div>
+        <div class="card-d">桌面版安装包与更新说明。</div>
+      </a>
+      <a class="card card-ext" href="../Chat/docs/deploy.html">
+        <div class="card-t">部署与数据</div>
+        <div class="card-d">数据存在哪、怎么备份、离线能用吗。</div>
+      </a>
+    </div>
+    <div class="note" style="margin-top:12px">
+      ⚠ 聊天室的<b>房间内权限</b>（能不能删这条消息）与<b>跨项目权限</b>
+      （能不能用云盘）是同一套 <code>acl_can</code>，只是作用域不同。
+      房间内的在这栏，跨项目的在「账号与权限」。
+    </div>
+  </section>
+
+  <!-- ── 档案 ───────────────────────────────────────────── -->
+  <section class="sec">
+    <div class="sec-h">
+      <span class="sec-name">人物档案</span>
+      <span class="sec-tag">Archive</span>
+      <span class="sec-key">archive</span>
+    </div>
+    <div class="cards">
+      <a class="card card-ext" href="../Archive/index.html">
+        <div class="card-t">打开档案</div>
+        <div class="card-d">人物档案与日记。铁律：原文永不被覆盖。</div>
+      </a>
+    </div>
+    <div class="note" style="margin-top:12px">
+      手册待补。目前只有入口页，用法说明还在写。
+    </div>
+  </section>
+
+  <!-- ── 代码 ───────────────────────────────────────────── -->
+  <section class="sec">
+    <div class="sec-h">
+      <span class="sec-name">在线代码</span>
+      <span class="sec-tag">Code</span>
+      <span class="sec-key">code</span>
+    </div>
+    <div class="cards">
+      <a class="card card-ext" href="../Code/index.html">
+        <div class="card-t">打开编辑器</div>
+        <div class="card-d">浏览器内的代码编辑器，自研 pylite / cpplite。</div>
+      </a>
+    </div>
+    <div class="note" style="margin-top:12px">
+      手册待补。运行时资源由 assets 仓库分发，还没在浏览器里跑通。
+    </div>
+  </section>
+
+  <!-- ── 云盘 ───────────────────────────────────────────── -->
+  <section class="sec">
+    <div class="sec-h">
+      <span class="sec-name">云盘</span>
+      <span class="sec-tag sec-tag-planned">规划中</span>
+      <span class="sec-key">drive</span>
+    </div>
+    <div class="cards">
+      <div class="card" style="opacity:.7;cursor:default">
+        <div class="card-t">尚未上线</div>
+        <div class="card-d">客户端加密后上传，服务端只存密文。权限点已在权限页预留。</div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script src="../assets/identity.js"></script>
+<script>
+  SiteIdentity && SiteIdentity.mount(document.getElementById('acctHost'));
+</script>
+</body>
+</html>
