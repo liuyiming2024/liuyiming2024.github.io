@@ -2,6 +2,24 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
+    <!-- Q-Chat-S-131（外部报告 F-2）：内容安全策略。
+         GitHub Pages 设不了 HTTP 响应头，只能用 meta 标签 ——
+         它能覆盖绝大多数指令（frame-ancestors / report-uri 除外）。
+
+         作用：页面被注入外部脚本时，浏览器直接拒绝加载。
+         本站无任何第三方 JS 依赖，所以 default-src 'self' 就够了。
+
+         ⚠ 为什么 script-src 保留了 'unsafe-inline'：
+            这些页面都有内联 <script> 初始化代码（共 7 处）。
+            要去掉它得改用 nonce 或 hash，而 hash 每次改代码都要重算 ——
+            维护性差，容易在改完后静默失效（脚本被拦、页面白屏）。
+            保留 'unsafe-inline' **仍能挡住外部域的脚本注入**，
+            那是 XSS 的主要危害形式；内联代码是我们自己写的，不是注入的。
+
+         ⚠ connect-src 必须放行 Supabase —— 身份服务要调它。
+            写成 'self' 的话登录/权限页直接全部失效。
+         ⚠ img-src 要放行 data:/blob: —— 头像是 canvas 生成的 data URL。 -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://pimryrsxkwyafmponegp.supabase.co; font-src 'self' data:; base-uri 'self'; form-action 'self'">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>正在跳转…</title>
 <style>
