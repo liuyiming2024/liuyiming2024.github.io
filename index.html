@@ -77,10 +77,23 @@
     <div class="nav-links">
       <a href="#projects">项目</a>
       <a href="#about">关于本站</a>
+      <!-- Q-Chat-S-123：集群层账号设置。未登录时点进去会提示先登录，
+           这里不做显隐 —— 靠身份判断显隐会出现"明明登录了却不显示"的
+           时序问题（身份是异步拿到的），不如让页面自己处理。 -->
+      <a href="account.html">账号</a>
+      <!-- Q-Chat-S-124：集群层权限。未登录或非管理员点进去，
+           页面自己会提示 —— 这里不做显隐，因为身份是异步拿到的，
+           靠 JS 判断显隐会出现"明明登录了却看不到入口"的时序问题。 -->
+      <a href="perm.html">权限</a>
     </div>
     <!-- Q-Site-S-121：跨项目统一账号区。
          内容由 assets/account.js 填充（读取与聊天室同源的会话令牌）。 -->
     <div id="acctHost" class="acct-host"></div>
+    <script>
+      /* identity.js 不会自己渲染（它可能只是被别的脚本调用），
+         所以在容器后面显式挂一次。 */
+      window.SiteIdentity && SiteIdentity.mount(document.getElementById('acctHost'));
+    </script>
     <button class="icon-btn" id="btnTheme" title="切换深色 / 浅色" aria-label="切换深色 / 浅色"><svg class="ic" aria-hidden="true"><use href="#i-moon"/></svg></button>
   </div>
 </nav>
@@ -162,9 +175,9 @@
      由 JS 在口令通过后动态插入。 -->
 <div id="archiveSlot"></div>
 
-<!-- Q-Site-S-121：账号区脚本放在 Chat 仓库（账号系统归它所有），
-     主页这边通过同源绝对链接引用 —— 只有一份实现，不会两边漂移。 -->
-<script src="https://liuyiming2024.github.io/Chat/assets/account.js"></script>
+<!-- Q-Site-S-122：全站统一身份服务。所有项目引用这同一份，
+     登录界面也只有 login.html 一个。 -->
+<script src="assets/identity.js"></script>
 <script>
 (function () {
   var KEY = 'home_theme';

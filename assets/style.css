@@ -21,6 +21,40 @@ a{color:var(--brand);text-decoration:none}
 a:hover{text-decoration:underline}
 code{background:var(--brand-soft);padding:1px 5px;border-radius:3px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.9em}
 
+/* 账号区（Q-Site-S-121）────────────────────────────────
+   由 assets/identity.js 渲染。类名必须与 Chat/assets/site.css 那份
+   完全一致：两边共用同一个脚本、同一套类，改一处就够。
+   ⚠ 上次漏加了这一整段，账号区在页面上裸奔（无高宽、无头像圆形），
+     而断言只检查了 index.html 有容器 —— "容器在、样式没加"抓不到。
+     所以这次把 .acct-host 也写进锚点，两边一起验。 */
+.acct-host { display: flex; align-items: center; gap: 8px; }
+.acct-box  { display: flex; align-items: center; gap: 7px; }
+.acct-av {
+  width: 26px; height: 26px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 12px; font-weight: 600; flex: none;
+  background-color: #8c8c8c;   /* 首字可能是 emoji，兜底防透明圆 */
+}
+.acct-owner { box-shadow: 0 0 0 2px var(--brand); }
+.acct-admin { box-shadow: 0 0 0 2px var(--border); }
+.acct-name { font-size: 13px; font-weight: 500; max-width: 90px;
+             overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.acct-role { font-size: 11px; padding: 1px 6px; border-radius: 4px;
+             background: var(--brand-soft); color: var(--brand-dark); flex: none; }
+/* 待审核 / 已封禁必须与正常角色视觉分开：
+   登了录却什么都用不了，界面不说，用户只会以为站点坏了。 */
+.acct-pending { background: #fff3cd; color: #8a6100; }
+.acct-btn {
+  font-size: 12px; padding: 4px 10px; border-radius: 6px;
+  border: 1px solid var(--border); background: var(--panel); color: var(--text);
+  text-decoration: none; cursor: pointer; flex: none; font-family: inherit;
+}
+.acct-btn:hover { border-color: var(--brand); color: var(--brand); }
+.acct-out { border-color: transparent; background: transparent; color: var(--dim); padding: 4px 6px; }
+.acct-out:hover { color: #d93025; }
+.acct-off { opacity: .65; cursor: default; }
+@media (max-width: 560px) { .acct-name, .acct-role { display: none; } }
+
 /* 导航 */
 .nav{background:var(--panel);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:50}
 .nav-inner{max-width:1000px;margin:0 auto;padding:0 16px;height:56px;display:flex;align-items:center;gap:18px}

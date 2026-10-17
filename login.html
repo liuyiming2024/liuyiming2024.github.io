@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>登录 · 全站统一账号</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%233b7ff2'/%3E%3Cpath d='M8 11h16M8 16h11' stroke='%23fff' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  /* 本页专用：登录卡片居中。其余一律复用 assets/style.css，
+     不另造一套配色 —— 换主题时登录页必须跟着变，
+     否则从主页点进来颜色突变，看着像跳到了别的站。 */
+  .login-wrap { min-height: calc(100vh - 56px); display: flex;
+                align-items: center; justify-content: center; padding: 24px 16px; }
+  .login-card { width: 100%; max-width: 360px; background: var(--panel);
+                border: 1px solid var(--border); border-radius: var(--radius);
+                padding: 26px 24px 22px; }
+  .login-title { font-size: 20px; font-weight: 600; margin: 0 0 4px; }
+  .login-sub { font-size: 13px; color: var(--dim); margin: 0 0 18px; }
+  .field { width: 100%; box-sizing: border-box; padding: 9px 11px; font-size: 14px;
+           border: 1px solid var(--border); border-radius: 6px;
+           background: var(--bg); color: var(--text); font-family: inherit; }
+  .field:focus { outline: 2px solid var(--brand); outline-offset: -1px; }
+  .field-label { display: block; font-size: 12px; color: var(--dim); margin: 12px 0 5px; }
+  .btn-primary { width: 100%; padding: 10px; font-size: 14px; font-weight: 500;
+                 border: none; border-radius: 6px; background: var(--brand);
+                 color: #fff; cursor: pointer; margin-top: 18px; font-family: inherit; }
+  .btn-primary:hover { background: var(--brand-dark); }
+  .btn-primary:disabled { opacity: .6; cursor: default; }
+  .btn-ghost { width: 100%; padding: 8px; margin-top: 8px; font-size: 13px;
+               border: 1px solid var(--border); border-radius: 6px;
+               background: transparent; color: var(--dim); cursor: pointer; font-family: inherit; }
+  .err { margin-top: 12px; font-size: 13px; color: #d93025; min-height: 18px; line-height: 1.5; }
+  .tabs { display: flex; gap: 4px; margin-bottom: 6px; border-bottom: 1px solid var(--border); }
+  .tab { flex: 1; padding: 8px 0; font-size: 13px; border: none; background: none;
+         color: var(--dim); cursor: pointer; font-family: inherit;
+         border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  .tab.on { color: var(--text); font-weight: 500; border-bottom-color: var(--brand); }
+  .hint { font-size: 12px; color: var(--dim); margin-top: 14px; line-height: 1.7; }
+  .hint a { color: var(--brand); text-decoration: none; }
+  .who { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .offline-note { font-size: 12px; color: #8a6100; background: #fff3cd;
+                  border-radius: 6px; padding: 8px 10px; margin-bottom: 14px; line-height: 1.6; }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="logo" href="index.html">项目主页</a>
+    <div class="nav-links"><a href="index.html">返回首页</a></div>
+    <div id="acctHost" class="acct-host"></div>
+  </div>
+</nav>
+
+<div class="login-wrap">
+  <div class="login-card">
+    <h1 class="login-title">全站统一账号</h1>
+    <p class="login-sub">一处登录，各项目通用</p>
+
+    <div id="offlineNote" class="offline-note" hidden>
+      连不上服务器。本页需要联网才能登录。
+    </div>
+
+    <div id="pane"></div>
+    <div class="err" id="err"></div>
+
+    <div class="hint">
+      账号由聊天室系统管理，注册后需站长审核通过才能登录。
+      忘记密码请联系站长重置。
+    </div>
+  </div>
+</div>
+
+<script src="assets/identity.js"></script>
+<script>
+/* ================================================================
+   login.html —— 全站唯一的登录界面（Q-Site-S-121）
+
+   为什么全站只有这一个：
+     登录牵扯的东西太多（失败冻结 15 分钟 8 次、全局爆破闸门、
+     两套凭据的区别、桌面版桥接票据），每个项目各做一份必然漂移。
+     于是"同一个账号在 A 项目会被冻结、在 B 项目不会" ——
+     安全边界取决于用户从哪个门进，这是不能接受的。
+
+   ⚠ 本页不实现任何业务逻辑，只调用 SiteIdentity。
+     所有规则都在服务端的 user_login / user_register 里。
+================================================================ */
+
+(function () {
+  'use strict';
+  var SI = window.SiteIdentity;
+  var pane = document.getElementById('pane');
+  var errBox = document.getElementById('err');
+
+  /* ⚠ next 必须过白名单。identity.js 的 safeNext 只放行同源地址 ——
+     否则这就是开放重定向：域名看着是你的，登录完送到钓鱼站去。 */
+  var next = SI._safeNext(new URLSearchParams(location.search).get('next')) || 'index.html';
+
+  function err(m) { errBox.textContent = m || ''; }
+
+  function drawTabs(cur) {
+    var t = document.createElement('div');
+    t.className = 'tabs';
+    ['login', 'reg'].forEach(function (k) {
+      var b = document.createElement('button');
+      b.className = 'tab' + (k === cur ? ' on' : '');
+      b.type = 'button';
+      b.textContent = k === 'login' ? '登录' : '注册';
+      b.onclick = function () { draw(k); };
+      t.appendChild(b);
+    });
+    return t;
+  }
+
+  function field(label, id, type) {
+    var l = document.createElement('label');
+    l.className = 'field-label';
+    l.setAttribute('for', id);
+    l.textContent = label;
+    var i = document.createElement('input');
+    i.className = 'field';
+    i.id = id;
+    if (type) i.type = type;
+    return [l, i];
+  }
+
+  function btn(text, fn, ghost) {
+    var b = document.createElement('button');
+    b.className = ghost ? 'btn-ghost' : 'btn-primary';
+    b.type = 'button';
+    b.textContent = text;
+    b.onclick = fn;
+    return b;
+  }
+
+  function draw(mode) {
+    pane.innerHTML = '';
+    err('');
+
+    /* 已登录：不显示表单，显示身份 + 回去 / 换人。
+       ⚠ 不能让已登录的人再登录一次 —— 那会签发第二张令牌，
+       而"退出"只清当前持有的那张，另一张在服务端仍然有效。 */
+    var st = SI.state;
+    if (st.ok) {
+      var w = document.createElement('div');
+      w.className = 'who';
+      w.appendChild(SI.avatarEl(st.nick, st.role));
+      var s = document.createElement('span');
+      s.textContent = '已登录：' + st.nick +
+        (st.status && st.status !== 'active' ? '（' + st.status + '）' : '');
+      w.appendChild(s);
+      pane.appendChild(w);
+      pane.appendChild(btn('继续前往 →', function () { location.href = next; }));
+      /* 集群层的账号设置入口（Q-Chat-S-123） */
+      pane.appendChild(btn('账号设置', function () { location.href = 'account.html'; }, true));
+      pane.appendChild(btn('退出并用其他账号登录', function () {
+        SI.logout().then(function () { draw(mode); });
+      }, true));
+      return;
+    }
+
+    pane.appendChild(drawTabs(mode || 'login'));
+
+    if ((mode || 'login') === 'login') {
+      var f1 = field('昵称', 'lNick');
+      var f2 = field('登录密码', 'lPwd', 'password');
+      pane.appendChild(f1[0]); pane.appendChild(f1[1]);
+      pane.appendChild(f2[0]); pane.appendChild(f2[1]);
+
+      var ok = btn('登录', function () {
+        var n = f1[1].value.trim(), p = f2[1].value;
+        if (!n || !p) { err('请填写昵称和密码'); return; }
+        ok.disabled = true; ok.textContent = '登录中…'; err('');
+        SI.login(n, p).then(function () {
+          location.href = next;
+        }).catch(function (e) {
+          /* ⚠ 服务端已经刻意让"昵称不存在"与"密码错误"返回同一句话
+             （否则能凭报错枚举出哪些昵称注册过）。这里原样展示即可。 */
+          err(e && e.message ? e.message : '登录失败');
+          ok.disabled = false; ok.textContent = '登录';
+        });
+      });
+      pane.appendChild(ok);
+      /* 回车提交：不接的话，用户填完密码按回车毫无反应，
+         会以为按钮坏了 —— 而这是最自然的登录动作。 */
+      f2[1].addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' && !ok.disabled) ok.click();
+      });
+      f1[1].focus();
+
+    } else {
+      var g1 = field('昵称', 'rNick');
+      var g2 = field('申请说明（可选，仅站长可见）', 'rNote');
+      var g3 = field('密码', 'rPwd', 'password');
+      pane.appendChild(g1[0]); pane.appendChild(g1[1]);
+      pane.appendChild(g2[0]); pane.appendChild(g2[1]);
+      pane.appendChild(g3[0]); pane.appendChild(g3[1]);
+
+      var rb = btn('提交注册申请', function () {
+        var n = g1[1].value.trim(), p = g3[1].value;
+        if (!n || !p) { err('请填写昵称和密码'); return; }
+        rb.disabled = true; rb.textContent = '提交中…'; err('');
+        SI.register(n, g2[1].value.trim(), p).then(function (r) {
+          if (r && r.ok === false) { err(r.err || '注册失败'); rb.disabled = false; rb.textContent = '提交注册申请'; return; }
+          err('');
+          pane.innerHTML = '';
+          var d = document.createElement('div');
+          d.className = 'hint';
+          d.textContent = '已提交。需站长审核通过后才能登录，审核期间用这个昵称登录会提示"账号待审核"。';
+          pane.appendChild(d);
+          pane.appendChild(btn('返回登录', function () { draw('login'); }, true));
+        }).catch(function (e) {
+          err(e && e.message ? e.message : '注册失败');
+          rb.disabled = false; rb.textContent = '提交注册申请';
+        });
+      });
+      pane.appendChild(rb);
+      g1[1].focus();
+    }
+  }
+
+  /* 启动 */
+  SI.ready.then(function (st) {
+    if (st && st.offline) document.getElementById('offlineNote').hidden = false;
+    draw('login');
+  });
+  SI.mount(document.getElementById('acctHost'));
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>账号设置 · 全站统一账号</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%233b7ff2'/%3E%3Cpath d='M8 11h16M8 16h11' stroke='%23fff' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  /* 复用 assets/style.css 的配色，不另造一套 ——
+     换主题时本页必须跟着变，否则从主页点进来颜色突变，
+     看着像跳到了别的站。 */
+  .ac-wrap { max-width: 660px; margin: 0 auto; padding: 24px 16px 48px; }
+  .ac-card { background: var(--panel); border: 1px solid var(--border);
+             border-radius: var(--radius); padding: 22px 20px; margin-bottom: 16px; }
+  .ac-h { font-size: 15px; font-weight: 600; margin: 0 0 4px; }
+  .ac-sub { font-size: 12px; color: var(--dim); margin: 0 0 16px; line-height: 1.6; }
+  .field { width: 100%; box-sizing: border-box; padding: 9px 11px; font-size: 14px;
+           border: 1px solid var(--border); border-radius: 6px;
+           background: var(--bg); color: var(--text); font-family: inherit; }
+  .field:focus { outline: 2px solid var(--brand); outline-offset: -1px; }
+  .field-label { display: block; font-size: 12px; color: var(--dim); margin: 12px 0 5px; }
+  textarea.field { min-height: 64px; resize: vertical; }
+  .btn-primary { padding: 9px 16px; font-size: 13px; font-weight: 500; border: none;
+                 border-radius: 6px; background: var(--brand); color: #fff;
+                 cursor: pointer; font-family: inherit; margin-top: 14px; }
+  .btn-primary:hover { background: var(--brand-dark); }
+  .btn-primary:disabled { opacity: .6; cursor: default; }
+  .btn-ghost { padding: 8px 14px; font-size: 13px; border: 1px solid var(--border);
+               border-radius: 6px; background: transparent; color: var(--dim);
+               cursor: pointer; font-family: inherit; }
+  .btn-ghost:hover { border-color: var(--brand); color: var(--brand); }
+  .msg { font-size: 13px; margin-top: 10px; min-height: 18px; line-height: 1.5; }
+  .msg-ok { color: #1a9e4b; }
+  .msg-err { color: #d93025; }
+
+  .av-row { display: flex; align-items: center; gap: 14px; }
+  .av-prev { width: 56px; height: 56px; border-radius: 50%; flex: none;
+             display: inline-flex; align-items: center; justify-content: center;
+             color: #fff; font-size: 22px; font-weight: 600;
+             background: #8c8c8c; background-size: cover; }
+  .av-acts { display: flex; flex-direction: column; gap: 6px; }
+  .av-acts .btn-ghost { text-align: left; padding: 6px 12px; font-size: 12px; }
+
+  /* 审核队列 */
+  .rev-item { display: flex; align-items: center; gap: 10px;
+              padding: 10px 0; border-top: 1px solid var(--border); }
+  .rev-item:first-child { border-top: none; }
+  .rev-main { flex: 1; min-width: 0; }
+  .rev-nick { font-size: 14px; font-weight: 500; }
+  .rev-note { font-size: 12px; color: var(--dim); margin-top: 2px;
+              word-break: break-all; line-height: 1.5; }
+  .rev-acts { display: flex; gap: 6px; flex: none; }
+  .rev-acts button { padding: 5px 11px; font-size: 12px; border-radius: 5px;
+                     border: 1px solid var(--border); background: transparent;
+                     color: var(--text); cursor: pointer; font-family: inherit; }
+  .rev-ok:hover { border-color: #1a9e4b; color: #1a9e4b; }
+  .rev-no:hover { border-color: #d93025; color: #d93025; }
+  .empty { font-size: 13px; color: var(--dim); padding: 8px 0; }
+  .gate { text-align: center; padding: 40px 16px; color: var(--dim); font-size: 14px; }
+  .gate a { color: var(--brand); }
+  .note-warn { font-size: 12px; color: #8a6100; background: #fff3cd;
+               border-radius: 6px; padding: 8px 10px; margin: 12px 0 0; line-height: 1.6; }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="logo" href="index.html">项目主页</a>
+    <div class="nav-links"><a href="index.html">返回首页</a></div>
+    <div id="acctHost" class="acct-host"></div>
+  </div>
+</nav>
+
+<div class="ac-wrap">
+  <div id="gate" class="gate">正在检查登录状态…</div>
+  <div id="body" hidden>
+
+    <!-- ── 头像 ───────────────────────────────────────── -->
+    <div class="ac-card">
+      <h2 class="ac-h">头像</h2>
+      <p class="ac-sub">存在服务端，换设备、换项目都在。不设就用昵称首字生成的彩色圆。</p>
+      <div class="av-row">
+        <div id="avPrev" class="av-prev">?</div>
+        <div class="av-acts">
+          <button class="btn-ghost" id="btnPick">选择图片…</button>
+          <button class="btn-ghost" id="btnClear">恢复为默认</button>
+        </div>
+      </div>
+      <input type="file" id="file" accept="image/*" hidden>
+      <div class="msg" id="avMsg"></div>
+      <div class="note-warn" id="avNote" hidden>
+        图片会上传到公共存储，任何人拿到链接都能看。别用含个人敏感信息的图。
+      </div>
+    </div>
+
+    <!-- ── 资料 ───────────────────────────────────────── -->
+    <div class="ac-card">
+      <h2 class="ac-h">资料</h2>
+      <p class="ac-sub">改昵称会立刻在全站生效。</p>
+      <label class="field-label" for="fNick">昵称</label>
+      <input class="field" id="fNick">
+      <label class="field-label" for="fBio">简介</label>
+      <textarea class="field" id="fBio"></textarea>
+      <button class="btn-primary" id="btnSave">保存资料</button>
+      <div class="msg" id="pMsg"></div>
+    </div>
+
+    <!-- ── 密码 ───────────────────────────────────────── -->
+    <div class="ac-card">
+      <h2 class="ac-h">修改密码</h2>
+      <p class="ac-sub">改密码会让<b>所有设备上的登录失效</b>，需要重新登录。</p>
+      <label class="field-label" for="fOld">原密码</label>
+      <input class="field" id="fOld" type="password">
+      <label class="field-label" for="fNew">新密码（至少 4 位）</label>
+      <input class="field" id="fNew" type="password">
+      <button class="btn-primary" id="btnPwd">修改密码</button>
+      <div class="msg" id="wMsg"></div>
+    </div>
+
+    <!-- ── 审核（仅管理员可见）─────────────────────────── -->
+    <div class="ac-card" id="revCard" hidden>
+      <h2 class="ac-h">注册审核</h2>
+      <p class="ac-sub">通过后才可登录。驳回的人仍保留在列表里，可再次通过。</p>
+      <div id="revList"><div class="empty">加载中…</div></div>
+      <div class="msg" id="rMsg"></div>
+    </div>
+
+  </div>
+</div>
+
+<script src="assets/identity.js"></script>
+<script>
+/* ================================================================
+   account.html —— 全站账号设置（Q-Chat-S-123）
+
+   为什么这个页在集群层而不是项目里：
+     账号不归任何单个项目，所以设置页也不该长在项目里。
+     否则在主页改了昵称，聊天室要等下次同步才看得到，
+     用户会以为"改了没生效"。同一份资料两个地方改，必然漂移。
+
+   本页不实现业务逻辑，全部调用 SiteIdentity → 服务端 RPC。
+================================================================ */
+
+(function () {
+  'use strict';
+  var SI = window.SiteIdentity;
+  var $ = function (id) { return document.getElementById(id); };
+
+  function msg(el, text, ok) {
+    el.textContent = text || '';
+    el.className = 'msg' + (text ? (ok ? ' msg-ok' : ' msg-err') : '');
+  }
+
+  /* 头像预览：与 identity.js 的 avatarEl 同算法（首字 + 昵称哈希色相）。
+     用自己的容器而不是复用 avatarEl，是因为这里要 56px 且能换背景图。 */
+  function drawPrev(nick, url) {
+    var p = $('avPrev');
+    var name = nick || '?';
+    var hue = 0;
+    for (var i = 0; i < name.length; i++) hue = (hue * 31 + name.charCodeAt(i)) % 360;
+    p.style.backgroundColor = 'hsl(' + hue + ',52%,52%)';
+    p.style.backgroundImage = url ? 'url(' + url + ')' : '';
+    p.textContent = url ? '' : String(name).trim().slice(0, 1).toUpperCase();
+  }
+
+  function drawProfile(st) {
+    $('fNick').value = st.nick || '';
+    $('fBio').value = st.bio || '';
+    drawPrev(st.nick, st.avatar);
+  }
+
+  /* ---------------- 审核队列 ---------------- */
+
+  function loadReview() {
+    var box = $('revList');
+    SI.listUsers('pending').then(function (r) {
+      var list = (r && r.users) || [];
+      box.innerHTML = '';
+      if (!list.length) {
+        box.innerHTML = '<div class="empty">没有待审核的申请</div>';
+        return;
+      }
+      list.forEach(function (u) {
+        var row = document.createElement('div');
+        row.className = 'rev-item';
+
+        var av = SI.avatarEl(u.nick, u.role);
+        row.appendChild(av);
+
+        var main = document.createElement('div');
+        main.className = 'rev-main';
+        var nm = document.createElement('div');
+        nm.className = 'rev-nick';
+        nm.textContent = u.nick;
+        main.appendChild(nm);
+        /* ⚠ 申请说明（real_name）只有管理员拿得到 ——
+           服务端 user_list 对普通成员返回 null。
+           这里能显示，说明当前确实是管理员。 */
+        if (u.note) {
+          var nt = document.createElement('div');
+          nt.className = 'rev-note';
+          nt.textContent = '申请说明：' + u.note;
+          main.appendChild(nt);
+        }
+        row.appendChild(main);
+
+        var acts = document.createElement('div');
+        acts.className = 'rev-acts';
+
+        var ok = document.createElement('button');
+        ok.className = 'rev-ok';
+        ok.textContent = '通过';
+        ok.onclick = function () {
+          ok.disabled = true; ok.textContent = '…';
+          SI.review(u.id, 'active').then(function () {
+            msg($('rMsg'), '已通过：' + u.nick, true);
+            loadReview();
+          }).catch(function (e) {
+            msg($('rMsg'), '失败：' + (e && e.message ? e.message : '网络错误'), false);
+            ok.disabled = false; ok.textContent = '通过';
+          });
+        };
+
+        var no = document.createElement('button');
+        no.className = 'rev-no';
+        no.textContent = '驳回';
+        no.onclick = function () {
+          no.disabled = true; no.textContent = '…';
+          /* 驳回 = 保持 pending 还是 banned？
+             这里**不用 banned** —— banned 是"曾通过、后被封"，
+             一个从没进过站的人被标成 banned 会混进封禁名单，
+             以后统计"封禁人数"就不准了。驳回就留在 pending。 */
+          SI.review(u.id, 'pending').then(function () {
+            msg($('rMsg'), '已驳回（保留在待审核列表）：' + u.nick, true);
+            loadReview();
+          }).catch(function (e) {
+            msg($('rMsg'), '失败：' + (e && e.message ? e.message : '网络错误'), false);
+            no.disabled = false; no.textContent = '驳回';
+          });
+        };
+
+        acts.appendChild(ok); acts.appendChild(no);
+        row.appendChild(acts);
+        box.appendChild(row);
+      });
+    }).catch(function (e) {
+      box.innerHTML = '<div class="empty">加载失败：' +
+        (e && e.message ? e.message : '网络错误') + '</div>';
+    });
+  }
+
+  /* ---------------- 事件 ---------------- */
+
+  function bind() {
+    $('btnPick').onclick = function () { $('file').click(); };
+
+    $('file').onchange = function () {
+      var f = this.files && this.files[0];
+      if (!f) return;
+      /* 头像不需要原图那么大：缩到 256px 再传。
+         不压缩的话一张手机照片 4MB，上传慢、存储贵，
+         而头像显示尺寸只有几十像素。 */
+      var b = $('btnPick');
+      b.disabled = true; b.textContent = '上传中…';
+      msg($('avMsg'), '');
+      shrink(f, 256).then(function (blob) {
+        return SI.uploadAvatar(blob, 'image/png');
+      }).then(function (url) {
+        return SI.profileUpdate({ avatar: url });
+      }).then(function (st) {
+        drawPrev(st.nick, st.avatar);
+        msg($('avMsg'), '头像已更新', true);
+        b.disabled = false; b.textContent = '选择图片…';
+      }).catch(function (e) {
+        msg($('avMsg'), '失败：' + (e && e.message ? e.message : '网络错误'), false);
+        b.disabled = false; b.textContent = '选择图片…';
+      });
+      this.value = '';   /* 清空以便重选同一张图也能触发 change */
+    };
+
+    $('btnClear').onclick = function () {
+      var b = this;
+      b.disabled = true; b.textContent = '处理中…';
+      /* ⚠ 传 '' 而不是 null —— 服务端用 case when p_avatar='' 判定清空。
+         传 null 会被当成"没传"，头像永远删不掉。 */
+      SI.profileUpdate({ avatar: '' }).then(function (st) {
+        drawPrev(st.nick, st.avatar);
+        msg($('avMsg'), '已恢复为默认头像', true);
+        b.disabled = false; b.textContent = '恢复为默认';
+      }).catch(function (e) {
+        msg($('avMsg'), '失败：' + (e && e.message ? e.message : '网络错误'), false);
+        b.disabled = false; b.textContent = '恢复为默认';
+      });
+    };
+
+    $('btnSave').onclick = function () {
+      var b = this;
+      var nick = $('fNick').value.trim();
+      if (!nick) { msg($('pMsg'), '昵称不能为空', false); return; }
+      b.disabled = true; b.textContent = '保存中…';
+      SI.profileUpdate({ nick: nick, bio: $('fBio').value.trim() })
+        .then(function (st) {
+          drawPrev(st.nick, st.avatar);
+          msg($('pMsg'), '已保存', true);
+          b.disabled = false; b.textContent = '保存资料';
+        })
+        .catch(function (e) {
+          msg($('pMsg'), '失败：' + (e && e.message ? e.message : '网络错误'), false);
+          b.disabled = false; b.textContent = '保存资料';
+        });
+    };
+
+    $('btnPwd').onclick = function () {
+      var b = this;
+      var o = $('fOld').value, n = $('fNew').value;
+      if (!o || !n) { msg($('wMsg'), '请填写原密码和新密码', false); return; }
+      if (n.length < 4) { msg($('wMsg'), '新密码至少 4 位', false); return; }
+      b.disabled = true; b.textContent = '提交中…';
+      SI.changePassword(o, n).then(function () {
+        msg($('wMsg'), '密码已修改。所有设备需重新登录。', true);
+        $('fOld').value = ''; $('fNew').value = '';
+        b.disabled = false; b.textContent = '修改密码';
+      }).catch(function (e) {
+        msg($('wMsg'), '失败：' + (e && e.message ? e.message : '网络错误'), false);
+        b.disabled = false; b.textContent = '修改密码';
+      });
+    };
+  }
+
+  /* 图片缩到 maxPx 再转 PNG */
+  function shrink(file, maxPx) {
+    return new Promise(function (res, rej) {
+      var img = new Image();
+      var url = URL.createObjectURL(file);
+      img.onload = function () {
+        URL.revokeObjectURL(url);
+        var s = Math.min(1, maxPx / Math.max(img.width, img.height));
+        var c = document.createElement('canvas');
+        c.width = Math.round(img.width * s);
+        c.height = Math.round(img.height * s);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        c.toBlob(function (b) {
+          if (b) res(b); else rej(new Error('图片处理失败'));
+        }, 'image/png');
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); rej(new Error('图片读取失败')); };
+      img.src = url;
+    });
+  }
+
+  /* ---------------- 启动 ---------------- */
+
+  SI.ready.then(function (st) {
+    if (!st || !st.ok) {
+      $('gate').innerHTML = st && st.offline
+        ? '连不上服务器，无法加载账号设置。'
+        : '需要先登录。<a href="login.html?next=' +
+          encodeURIComponent('account.html') + '">去登录 →</a>';
+      return;
+    }
+    $('gate').hidden = true;
+    $('body').hidden = false;
+    drawProfile(st);
+    $('avNote').hidden = false;
+    bind();
+
+    /* 审核区只给管理员 —— 但真正的闸门在服务端 user_list / user_review，
+       这里只是"不显示"。改 CSS 让隐藏的卡片显出来也没用，
+       服务端会直接拒绝。 */
+    if (st.role === 'owner' || st.role === 'admin') {
+      $('revCard').hidden = false;
+      loadReview();
+    }
+
+    /* 头像改了、昵称改了，别的标签页也要跟着变 ——
+       identity.js 的 storage 事件只监听令牌，资料变更靠这里刷。 */
+    SI.onChange(function (s2) { if (s2 && s2.ok) drawPrev(s2.nick, s2.avatar); });
+  });
+
+  SI.mount($('acctHost'));
+})();
+</script>
+</body>
+</html>

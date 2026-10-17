@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>权限 · 全站统一账号</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%233b7ff2'/%3E%3Cpath d='M8 11h16M8 16h11' stroke='%23fff' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  .pm-wrap { max-width: 720px; margin: 0 auto; padding: 24px 16px 48px; }
+  .pm-card { background: var(--panel); border: 1px solid var(--border);
+             border-radius: var(--radius); padding: 22px 20px; margin-bottom: 16px; }
+  .pm-h { font-size: 15px; font-weight: 600; margin: 0 0 4px; }
+  .pm-sub { font-size: 12px; color: var(--dim); margin: 0 0 16px; line-height: 1.6; }
+
+  /* 按项目分组 */
+  .grp { border-top: 1px solid var(--border); padding-top: 14px; margin-top: 14px; }
+  .grp:first-child { border-top: none; padding-top: 0; margin-top: 0; }
+  .grp-h { display: flex; align-items: baseline; gap: 8px; margin-bottom: 10px; }
+  .grp-name { font-size: 13px; font-weight: 600; }
+  .grp-key { font-size: 11px; color: var(--dim); font-family: ui-monospace, monospace; }
+  .grp-del { margin-left: auto; font-size: 11px; color: var(--dim);
+             background: none; border: 1px solid var(--border); border-radius: 5px;
+             padding: 3px 9px; cursor: pointer; font-family: inherit; }
+
+  .row { display: flex; align-items: center; gap: 10px; padding: 7px 0; }
+  .row-key { font-family: ui-monospace, monospace; font-size: 12px;
+             color: var(--text); min-width: 150px; flex: none; }
+  .row-label { font-size: 13px; color: var(--dim); flex: 1; min-width: 0; }
+  .roles { display: flex; gap: 5px; flex: none; }
+  .tag { font-size: 11px; padding: 2px 7px; border-radius: 4px;
+         background: var(--brand-soft); color: var(--brand-dark); }
+  .tag-off { background: transparent; border: 1px solid var(--border); color: var(--dim); }
+
+  /* 自测区 */
+  .test-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
+  .field { padding: 8px 10px; font-size: 13px; border: 1px solid var(--border);
+           border-radius: 6px; background: var(--bg); color: var(--text); font-family: inherit; }
+  .field:focus { outline: 2px solid var(--brand); outline-offset: -1px; }
+  select.field { min-width: 150px; }
+  .btn-primary { padding: 8px 14px; font-size: 13px; border: none; border-radius: 6px;
+                 background: var(--brand); color: #fff; cursor: pointer; font-family: inherit; }
+  .btn-primary:hover { background: var(--brand-dark); }
+  .btn-primary:disabled { opacity: .6; cursor: default; }
+  .btn-ghost { padding: 7px 12px; font-size: 12px; border: 1px solid var(--border);
+               border-radius: 6px; background: transparent; color: var(--dim);
+               cursor: pointer; font-family: inherit; }
+  .btn-ghost:hover { border-color: var(--brand); color: var(--brand); }
+
+  /* 结果：状态必须视觉分得开，否则"不能"的三种原因看起来一样 */
+  .res { margin-top: 12px; padding: 12px 14px; border-radius: 6px; font-size: 13px; line-height: 1.6; }
+  .res-ok { background: #e8f7ee; color: #1a7f3c; }
+  .res-no { background: #fdeaea; color: #b3261e; }
+  .res-unknown { background: #fff3cd; color: #8a6100; }
+  .res-key { font-family: ui-monospace, monospace; font-weight: 600; }
+  .gate { text-align: center; padding: 40px 16px; color: var(--dim); font-size: 14px; }
+  .gate a { color: var(--brand); }
+  .msg { font-size: 13px; min-height: 18px; margin-top: 8px; }
+  .msg-err { color: #d93025; }
+  .note { font-size: 12px; color: var(--dim); line-height: 1.7; margin-top: 10px; }
+  .note code { background: var(--bg); padding: 1px 5px; border-radius: 3px;
+               font-family: ui-monospace, monospace; }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="logo" href="index.html">项目主页</a>
+    <div class="nav-links"><a href="index.html">返回首页</a></div>
+    <div id="acctHost" class="acct-host"></div>
+  </div>
+</nav>
+
+<div class="pm-wrap">
+  <div id="gate" class="gate">正在检查登录状态…</div>
+  <div id="body" hidden>
+
+    <!-- ── 权限点清单 ─────────────────────────────────── -->
+    <div class="pm-card">
+      <h2 class="pm-h">跨项目权限点</h2>
+      <p class="pm-sub">
+        按项目分组。<b>删掉某个项目时，整组删掉即可</b>，其余项目不受影响。
+        权限点命名规则是 <code>项目.动作</code>。
+      </p>
+      <div id="permList"><div class="empty">加载中…</div></div>
+      <div class="msg msg-err" id="lMsg"></div>
+    </div>
+
+    <!-- ── 判定自测 ───────────────────────────────────── -->
+    <div class="pm-card">
+      <h2 class="pm-h">判定自测</h2>
+      <p class="pm-sub">
+        调 <code>site_can(权限条目, 用户)</code>，返回状态值。
+        新增项目、改权限后在这里直接验，不用打开控制台。
+      </p>
+      <div class="test-row">
+        <select class="field" id="tPerm"></select>
+        <input class="field" id="tUser" placeholder="昵称（留空=我自己）" style="flex:1;min-width:140px">
+        <button class="btn-primary" id="btnTest">判定</button>
+      </div>
+      <div id="res"></div>
+      <div class="note">
+        <b>返回值含义</b><br>
+        <code>ok</code> 有权限 ·
+        <code>no</code> 没有 ·
+        <code>denied</code> 被单独禁止 ·
+        <code>banned</code> 已封禁 ·
+        <code>unknown</code> 权限点没注册（多半是名字拼错了）·
+        <code>no_user</code> 用户不存在
+      </div>
+      <div class="note">
+        ⚠ 这里只是"要不要显示按钮"的参考，<b>不是闸门</b>。
+        真正的闸门在各项目自己服务端的判断里 —— 前端判定永远可以被绕过。
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="assets/identity.js"></script>
+<script>
+/* ================================================================
+   perm.html —— 集群层权限页（Q-Chat-S-124）
+
+   为什么在主页而不是项目里：
+     权限升到集群层了 —— "能不能用云盘"这种问题的答案，
+     不该取决于你在哪个项目里问。所以配置它的页面也不该长在项目里。
+
+   本页只做展示与自测，真正的判定全在服务端 site_can()。
+================================================================ */
+
+(function () {
+  'use strict';
+  var SI = window.SiteIdentity;
+  var $ = function (id) { return document.getElementById(id); };
+
+  var ROLE = { owner: '站长', admin: '管理员', member: '成员' };
+  var perms = [];
+
+  /* 状态 → 文案。⚠ 必须每种状态都单独给说法 ——
+     一律显示"没有权限"的话，用户分不清是自己被禁了、
+     还是被封了、还是权限点压根没配。 */
+  var STATE = {
+    ok:       { cls: 'res-ok',      text: '有权限' },
+    no:       { cls: 'res-no',      text: '没有权限' },
+    denied:   { cls: 'res-no',      text: '被单独禁止（站长显式拒绝了这一项）' },
+    banned:   { cls: 'res-no',      text: '该用户已被封禁' },
+    unknown:  { cls: 'res-unknown', text: '这个权限点没有注册 —— 多半是名字拼错了' },
+    no_user:  { cls: 'res-unknown', text: '找不到这个用户（昵称不存在或不唯一）' }
+  };
+
+  function drawList(list) {
+    var box = $('permList');
+    box.innerHTML = '';
+    if (!list.length) { box.innerHTML = '<div class="empty">还没有注册任何跨项目权限点</div>'; return; }
+
+    /* 按 project 分组：删项目时整组删，一眼能找到该删哪些 */
+    var groups = {};
+    list.forEach(function (p) { (groups[p.project] = groups[p.project] || []).push(p); });
+
+    Object.keys(groups).sort().forEach(function (proj) {
+      var grp = document.createElement('div');
+      grp.className = 'grp';
+
+      var h = document.createElement('div');
+      h.className = 'grp-h';
+      var nm = document.createElement('span');
+      nm.className = 'grp-name';
+      nm.textContent = PROJ_NAME[proj] || proj;
+      h.appendChild(nm);
+      var kk = document.createElement('span');
+      kk.className = 'grp-key';
+      kk.textContent = proj;
+      h.appendChild(kk);
+      /* ⚠ appendChild 返回的是**被插入的那个节点**，不是父节点。
+         上面那种 h.appendChild(...).className = x 的写法能跑，
+         但读的人会以为在给 h 设 class —— 而且后面还要靠
+         h.lastChild 去取这个元素，等于把"它是哪个节点"变成隐式约定。
+         显式建变量，别让下一个改的人去猜。 */
+      var del = document.createElement('button');
+      del.className = 'grp-del';
+      del.type = 'button';
+      /* 删除按钮：给出**可直接执行的语句**，不真的执行 ——
+         删权限点是不可逆操作，不能点一下就没了。
+         让站长去服务端执行，保留了确认这一步。 */
+      del.textContent = '复制删除语句';
+      h.appendChild(del);
+      del.onclick = function () {
+        var sql = "delete from site_perms where project = '" + proj + "';";
+        copy(sql).then(function () {
+          del.textContent = '已复制';
+          setTimeout(function () { del.textContent = '复制删除语句'; }, 1600);
+        });
+      };
+      grp.appendChild(h);
+
+      groups[proj].forEach(function (p) {
+        var row = document.createElement('div');
+        row.className = 'row';
+        var k = document.createElement('span');
+        k.className = 'row-key';
+        k.textContent = p.key;
+        row.appendChild(k);
+        var lb = document.createElement('span');
+        lb.className = 'row-label';
+        lb.textContent = p.label;
+        row.appendChild(lb);
+
+        var rs = document.createElement('span');
+        rs.className = 'roles';
+        ['owner', 'admin', 'member'].forEach(function (r) {
+          var t = document.createElement('span');
+          var has = (p.defaultRoles || []).indexOf(r) >= 0;
+          t.className = 'tag' + (has ? '' : ' tag-off');
+          t.textContent = ROLE[r];
+          t.title = has ? ('默认拥有：' + ROLE[r]) : ('默认不开放给' + ROLE[r]);
+          rs.appendChild(t);
+        });
+        row.appendChild(rs);
+        grp.appendChild(row);
+      });
+
+      box.appendChild(grp);
+    });
+  }
+
+  var PROJ_NAME = { drive: '云盘', archive: '档案', code: '代码', chat: '聊天室' };
+
+  function copy(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      /* ⚠ writeText 返回 Promise，同步 try/catch 抓不到异步失败 ——
+         抓不到就会在失败时谎报"已复制"（E-090 的教训）。 */
+      return navigator.clipboard.writeText(text);
+    }
+    return Promise.reject(new Error('浏览器不支持剪贴板'));
+  }
+
+  function fillSelect(list) {
+    var sel = $('tPerm');
+    sel.innerHTML = '';
+    list.forEach(function (p) {
+      var o = document.createElement('option');
+      o.value = p.key;
+      o.textContent = p.key + '　' + p.label;
+      sel.appendChild(o);
+    });
+  }
+
+  function bind() {
+    $('btnTest').onclick = function () {
+      var b = this;
+      var key = $('tPerm').value;
+      var nick = $('tUser').value.trim();
+      if (!key) return;
+      b.disabled = true; b.textContent = '判定中…';
+      $('res').innerHTML = '';
+
+      var p = nick ? SI.canNick(key, nick) : SI.can(key);
+      p.then(function (st) {
+        var s = STATE[st] || { cls: 'res-unknown', text: '未知状态：' + st };
+        var d = document.createElement('div');
+        d.className = 'res ' + s.cls;
+        var k = document.createElement('span');
+        k.className = 'res-key';
+        k.textContent = st;
+        d.appendChild(k);
+        d.appendChild(document.createTextNode('　' + s.text));
+        $('res').appendChild(d);
+        b.disabled = false; b.textContent = '判定';
+      }).catch(function (e) {
+        var d = document.createElement('div');
+        d.className = 'res res-unknown';
+        d.textContent = '调用失败：' + (e && e.message ? e.message : '网络错误');
+        $('res').appendChild(d);
+        b.disabled = false; b.textContent = '判定';
+      });
+    };
+
+    /* 回车提交 */
+    $('tUser').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') $('btnTest').click();
+    });
+  }
+
+  SI.ready.then(function (st) {
+    if (!st || !st.ok) {
+      $('gate').innerHTML = st && st.offline
+        ? '连不上服务器，无法加载权限页。'
+        : '需要先登录。<a href="login.html?next=' +
+          encodeURIComponent('perm.html') + '">去登录 →</a>';
+      return;
+    }
+    /* ⚠ 非管理员直接挡在这里，但**真正的闸门在服务端 site_perms_list()** ——
+       这里只是不显示。改 CSS 让 #body 显出来也没用，服务端会返回 no perm。 */
+    if (st.role !== 'owner' && st.role !== 'admin') {
+      $('gate').innerHTML = '权限配置仅站长与管理员可见。';
+      return;
+    }
+    $('gate').hidden = true;
+    $('body').hidden = false;
+    bind();
+
+    SI.listPerms().then(function (r) {
+      if (!r || !r.ok) {
+        $('permList').innerHTML = '<div class="empty">加载失败：' +
+          ((r && r.err) || '没有权限') + '</div>';
+        return;
+      }
+      perms = r.perms || [];
+      drawList(perms);
+      fillSelect(perms);
+    }).catch(function (e) {
+      $('permList').innerHTML = '<div class="empty">加载失败：' +
+        (e && e.message ? e.message : '网络错误') + '</div>';
+    });
+  });
+
+  SI.mount($('acctHost'));
+})();
+</script>
+</body>
+</html>
