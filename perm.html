@@ -23,7 +23,207 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>权限 · 全站统一账号</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%233b7ff2'/%3E%3Cpath d='M8 11h16M8 16h11' stroke='%23fff' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
-<link rel="stylesheet" href="assets/style.css">
+<style>
+/* __INLINED__ 由 assets/style.css 生成，勿手改；改样式请改源文件后重跑 inline-css.py */
+/* ==================================================================
+ * 个人主页样式 —— 无外部依赖，全部使用系统字体
+ * ================================================================== */
+:root{
+  --brand:#3b7ff2; --brand-dark:#2f6ad6; --brand-soft:#eaf2ff;
+  --bg:#f4f6f9; --panel:#fff; --text:#1f2329; --dim:#6b7280;
+  --border:#e5e8ec; --radius:10px;
+}
+body.dark{
+  --brand:#4d8bf5; --brand-dark:#3b7ff2; --brand-soft:#1b2735;
+  --bg:#101216; --panel:#171a1f; --text:#e6e6e6; --dim:#9aa0a6;
+  --border:#2a2e35;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg); color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  font-size:15px; line-height:1.75; -webkit-text-size-adjust:100%;
+}
+a{color:var(--brand);text-decoration:none}
+a:hover{text-decoration:underline}
+code{background:var(--brand-soft);padding:1px 5px;border-radius:3px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.9em}
+
+/* 账号区（Q-Site-S-121）────────────────────────────────
+   由 assets/identity.js 渲染。类名必须与 Chat/assets/site.css 那份
+   完全一致：两边共用同一个脚本、同一套类，改一处就够。
+   ⚠ 上次漏加了这一整段，账号区在页面上裸奔（无高宽、无头像圆形），
+     而断言只检查了 index.html 有容器 —— "容器在、样式没加"抓不到。
+     所以这次把 .acct-host 也写进锚点，两边一起验。 */
+.acct-host { display: flex; align-items: center; gap: 8px; }
+.acct-box  { display: flex; align-items: center; gap: 7px; }
+.acct-av {
+  width: 26px; height: 26px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 12px; font-weight: 600; flex: none;
+  background-color: #8c8c8c;   /* 首字可能是 emoji，兜底防透明圆 */
+}
+.acct-owner { box-shadow: 0 0 0 2px var(--brand); }
+.acct-admin { box-shadow: 0 0 0 2px var(--border); }
+.acct-name { font-size: 13px; font-weight: 500; max-width: 90px;
+             overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.acct-role { font-size: 11px; padding: 1px 6px; border-radius: 4px;
+             background: var(--brand-soft); color: var(--brand-dark); flex: none; }
+/* 待审核 / 已封禁必须与正常角色视觉分开：
+   登了录却什么都用不了，界面不说，用户只会以为站点坏了。 */
+.acct-pending { background: #fff3cd; color: #8a6100; }
+.acct-btn {
+  font-size: 12px; padding: 4px 10px; border-radius: 6px;
+  border: 1px solid var(--border); background: var(--panel); color: var(--text);
+  text-decoration: none; cursor: pointer; flex: none; font-family: inherit;
+}
+.acct-btn:hover { border-color: var(--brand); color: var(--brand); }
+.acct-out { border-color: transparent; background: transparent; color: var(--dim); padding: 4px 6px; }
+.acct-out:hover { color: #d93025; }
+.acct-off { opacity: .65; cursor: default; }
+@media (max-width: 560px) { .acct-name, .acct-role { display: none; } }
+
+/* 导航 */
+.nav{background:var(--panel);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:50}
+.nav-inner{max-width:1000px;margin:0 auto;padding:0 16px;height:56px;display:flex;align-items:center;gap:18px}
+.logo{font-size:16px;font-weight:700;color:var(--text);white-space:nowrap}
+.logo:hover{text-decoration:none}
+.nav-links{display:flex;gap:4px;flex:1}
+.nav-links a{padding:6px 12px;border-radius:6px;color:var(--text);font-size:14px}
+.nav-links a:hover{background:var(--brand-soft);text-decoration:none}
+.icon-btn{border:1px solid var(--border);background:var(--panel);color:var(--text);border-radius:6px;
+  width:32px;height:32px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center}
+.icon-btn:hover{border-color:var(--brand);color:var(--brand)}
+
+/* 容器 */
+.wrap{max-width:1000px;margin:0 auto;padding:28px 16px 60px}
+section{margin-bottom:38px;scroll-margin-top:70px}
+h2{font-size:20px;margin:0 0 14px;padding-left:10px;border-left:4px solid var(--brand)}
+
+/* Hero */
+.hero{background:linear-gradient(135deg,var(--brand),#2f6ad6);color:#fff;
+  border-radius:14px;padding:48px 34px;margin-bottom:34px}
+.hero h1{margin:0 0 8px;font-size:32px;line-height:1.35}
+.hero .sub{margin:0 0 18px;opacity:.93;font-size:15.5px}
+.hero-btns{display:flex;gap:10px;flex-wrap:wrap}
+.btn{display:inline-block;padding:9px 20px;border-radius:6px;font-size:14px;cursor:pointer;transition:.15s}
+.btn:hover{text-decoration:none;opacity:.9}
+.btn-primary{background:#fff;color:var(--brand);font-weight:600}
+.btn-ghost{background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.4)}
+
+/* 卡片 */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);
+  padding:18px;transition:.15s;display:block;color:inherit}
+.card:hover{border-color:var(--brand);transform:translateY(-2px);text-decoration:none}
+.card h3{margin:0 0 6px;font-size:15.5px}
+.card p{margin:0;font-size:13.5px;color:var(--dim);line-height:1.65}
+.card-icon{font-size:22px;margin-bottom:8px;display:block}
+
+/* 标签 */
+.tags{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.tag{background:var(--brand-soft);color:var(--brand);padding:4px 12px;border-radius:14px;font-size:13px}
+
+/* 关于 */
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:22px}
+.panel p{margin:0 0 12px}
+.panel p:last-child{margin-bottom:0}
+
+/* 时间线 */
+.timeline{border-left:2px solid var(--border);padding-left:18px;margin-left:6px}
+.tl-item{position:relative;padding-bottom:18px}
+.tl-item::before{content:'';position:absolute;left:-25px;top:7px;width:10px;height:10px;
+  border-radius:50%;background:var(--brand);border:2px solid var(--panel)}
+.tl-date{font-size:12.5px;color:var(--dim)}
+.tl-title{font-weight:600;font-size:15px;margin:1px 0 2px}
+.tl-desc{font-size:13.5px;color:var(--dim)}
+
+/* 页脚 */
+.foot{border-top:1px solid var(--border);background:var(--panel);
+  padding:26px 16px;text-align:center;color:var(--dim);font-size:13px}
+.foot a{color:var(--dim)}
+
+@media(max-width:720px){
+  /* ⚠ Q-Site-S-139：原来这里只写了 gap 与 height，
+     六个链接（项目/关于本站/手册/账号/权限/站点设置）仍被塞进同一行。
+     实测 360px 视口下：nav-links 被压到 248px 宽、六个链接各 38px，
+     "站点设置"四字在 38px 里必然溢出；nav-links 实际高 110px
+     而 nav-inner 只有 52px —— 子元素向上溢出 y=-29，跑到可视区外。
+     页面还因此产生横向滚动（scrollWidth 390 > 视口 360），能左右拖。
+
+     ★ 修法：链接另起一行，横向可滑动。
+       为什么不用汉堡菜单：那要写 JS、要管展开收起与点击外部关闭，
+       而这个导航只有六个纯链接 —— 横向滑动更简单也更不容易坏。
+       为什么不让它们换行成两三行：那会把内容区顶下去一大截，
+       导航条占掉半个屏幕，比横向滑动难看得多。 */
+  .nav-inner{gap:10px;height:auto;min-height:52px;flex-wrap:wrap;padding:8px 12px;row-gap:6px}
+  .nav-links{order:3;flex:1 0 100%;overflow-x:auto;flex-wrap:nowrap;
+    -webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:2px}
+  .nav-links::-webkit-scrollbar{display:none}
+  .nav-links a{flex:none;white-space:nowrap}
+  .hero{padding:32px 20px}
+  .hero h1{font-size:24px}
+  .wrap{padding:18px 12px 40px}
+}
+
+
+/* ================= 线性图标 =================
+ * 换掉 emoji：跨平台渲染不一致、深色模式下部分 emoji 自带颜色不跟主题变。
+ * 本页的深色变量与 Chat 项目不是同一套，所以显式给 --icon 兜底，
+ * 不纯靠继承父元素文字色 —— 否则深色下图标可能过暗看不见。 */
+:root { --icon: #3b7ff2; }
+body.dark { --icon: #7db3ff; }
+
+.ic {
+  width: 20px; height: 20px;
+  display: inline-block;
+  vertical-align: middle;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.ic-sm { width: 16px; height: 16px; }
+.ic-lg { width: 22px; height: 22px; }
+.ic-fill { fill: currentColor; stroke: none; }
+
+.card-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--icon);
+  margin-bottom: 8px;
+}
+.card-icon .ic { width: 20px; height: 20px; }
+
+.icon-btn { display: inline-flex; align-items: center; justify-content: center; }
+.icon-btn .ic { width: 18px; height: 18px; }
+
+
+/* 卡片：整张可点，但原来没有任何可点的暗示 */
+.card-main { position: relative; }
+.card-hit { display: block; color: inherit; text-decoration: none; }
+.card-src { z-index: 2; }
+.card-link {
+  display: inline-block;
+  margin-top: 10px;
+  color: var(--icon);
+  font-size: 13px;
+  font-weight: 600;
+}
+.card-src {
+  position: absolute;
+  right: 12px; bottom: 12px;
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 12px; color: #888; text-decoration: none;
+  padding: 3px 8px; border-radius: 4px;
+}
+.card-src:hover { background: rgba(0,0,0,.06); color: var(--icon); }
+body.dark .card-src:hover { background: rgba(255,255,255,.08); }
+.card-src .ic { width: 14px; height: 14px; }
+.card:hover { transform: translateY(-2px); }
+</style>
 <style>
   .pm-wrap { max-width: 720px; margin: 0 auto; padding: 24px 16px 48px; }
   .pm-card { background: var(--panel); border: 1px solid var(--border);
