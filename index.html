@@ -104,13 +104,22 @@
            页面自己会提示 —— 这里不做显隐，因为身份是异步拿到的，
            靠 JS 判断显隐会出现"明明登录了却看不到入口"的时序问题。 -->
       <a href="perm.html">权限</a>
+      <!-- Q-Chat-S-135：集群层站点设置（站点名 / 注册开关 / 保护密码）。
+           同样不做显隐 —— 非站长点进去页面自己会提示。
+           ⚠ 这三个功能此前**只有服务端函数、没有任何界面**，
+             而我此前说过"随时能重新开门""注册开关另有控制"——
+             那两句话当时只能通过跑 SQL 兑现。补上界面，
+             那两句话才真的成立。 -->
+      <a href="site.html">站点设置</a>
     </div>
     <!-- Q-Site-S-121：跨项目统一账号区。
          内容由 assets/account.js 填充（读取与聊天室同源的会话令牌）。 -->
-    <!-- 挂载在页面末尾做（见底部脚本）——
-         放在这里的话 identity.js 还没加载，SiteIdentity 是 undefined，
-         && 短路会静默跳过，账号区永远空白且不报错。 -->
     <div id="acctHost" class="acct-host"></div>
+    <script>
+      /* identity.js 不会自己渲染（它可能只是被别的脚本调用），
+         所以在容器后面显式挂一次。 */
+      window.SiteIdentity && SiteIdentity.mount(document.getElementById('acctHost'));
+    </script>
     <button class="icon-btn" id="btnTheme" title="切换深色 / 浅色" aria-label="切换深色 / 浅色"><svg class="ic" aria-hidden="true"><use href="#i-moon"/></svg></button>
   </div>
 </nav>
@@ -204,26 +213,6 @@
      登录界面也只有 login.html 一个。 -->
 <script src="assets/identity.js"></script>
 <script>
-/* Q-Site-S-121：账号区挂载。
- *
- * 必须放在 identity.js **之后**。
- * 之前这段写在 nav 里的 acctHost 后面（第 111 行左右），
- * 比 identity.js（第 207 行）早了近 100 行 —— 内联脚本同步执行，
- * 跑到那儿时 window.SiteIdentity 还是 undefined，
- * 而原写法是 `window.SiteIdentity && SiteIdentity.mount(...)`，
- * 短路后静默跳过，账号区一片空白且控制台无任何报错，极难排查。
- *
- * 另外改成显式判断：拿不到就报出来，别再无声失败。 */
-(function () {
-  var host = document.getElementById('acctHost');
-  if (!window.SiteIdentity) {
-    console.error('[home] assets/identity.js 没加载成功，账号区不显示');
-    return;
-  }
-  SiteIdentity.mount(host);
-})();
-
-/* 主题 */
 (function () {
   var KEY = 'home_theme';
   function apply(t) {

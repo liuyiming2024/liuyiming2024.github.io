@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+    <!-- Q-Chat-S-131（外部报告 F-2）：内容安全策略。
+         与 perm.html / account.html 同一份策略，理由见那两页的注释。
+         新增页面必须带上它 —— 漏一个就是一个可以被注入的入口。 -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://pimryrsxkwyafmponegp.supabase.co; font-src 'self' data:; base-uri 'self'; form-action 'self'">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>站点设置 · 全站统一账号</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%233b7ff2'/%3E%3Cpath d='M8 11h16M8 16h11' stroke='%23fff' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  .pm-wrap { max-width: 720px; margin: 0 auto; padding: 24px 16px 48px; }
+  .pm-card { background: var(--panel); border: 1px solid var(--border);
+             border-radius: var(--radius); padding: 22px 20px; margin-bottom: 16px; }
+  .pm-h { font-size: 15px; font-weight: 600; margin: 0 0 4px; }
+  .pm-sub { font-size: 12px; color: var(--dim); margin: 0 0 16px; line-height: 1.6; }
+
+  .field-label { display: block; font-size: 12px; color: var(--dim); margin: 14px 0 6px; }
+  .field { width: 100%; box-sizing: border-box; padding: 8px 10px; font-size: 13px;
+           border: 1px solid var(--border); border-radius: 6px;
+           background: var(--bg); color: var(--text); font-family: inherit; }
+  .field:focus { outline: 2px solid var(--brand); outline-offset: -1px; }
+
+  .sw { display: flex; align-items: center; gap: 10px; padding: 10px 0; }
+  .sw-txt { flex: 1; min-width: 0; }
+  .sw-name { font-size: 13px; }
+  .sw-desc { font-size: 11px; color: var(--dim); margin-top: 3px; line-height: 1.6; }
+  /* 开关用原生 checkbox：移动端点得准，无需自己处理键盘与无障碍 */
+  .sw input[type=checkbox] { width: 18px; height: 18px; flex: none; }
+
+  .btn-primary { padding: 8px 14px; font-size: 13px; border: none; border-radius: 6px;
+                 background: var(--brand); color: #fff; cursor: pointer; font-family: inherit; }
+  .btn-primary:hover { background: var(--brand-dark); }
+  .btn-primary:disabled { opacity: .6; cursor: default; }
+  .btn-ghost { padding: 8px 14px; font-size: 13px; border: 1px solid var(--border);
+               border-radius: 6px; background: transparent; color: var(--text);
+               cursor: pointer; font-family: inherit; }
+  .btn-ghost:hover { border-color: var(--brand); color: var(--brand); }
+  /* ⚠ 危险按钮必须长得不一样 —— 关掉保护密码是不可逆意图的操作，
+     跟"保存"长一个样的话，手滑一下整站就门洞大开。 */
+  .btn-danger { padding: 8px 14px; font-size: 13px; border: 1px solid #b3261e;
+                border-radius: 6px; background: transparent; color: #b3261e;
+                cursor: pointer; font-family: inherit; }
+  .btn-danger:hover { background: #b3261e; color: #fff; }
+
+  .msg { font-size: 13px; min-height: 18px; margin-top: 10px; }
+  .msg-ok { color: #1a7f3c; }
+  .msg-err { color: #d93025; }
+
+  .state { display: flex; align-items: center; gap: 8px; padding: 12px 14px;
+           border-radius: 6px; font-size: 13px; margin-bottom: 14px; }
+  .state-open { background: #e8f7ee; color: #1a7f3c; }
+  .state-off { background: #fff3cd; color: #8a6100; }
+  .state b { font-weight: 600; }
+
+  .note { font-size: 12px; color: var(--dim); line-height: 1.7; margin-top: 12px; }
+  .note code { background: var(--bg); padding: 1px 5px; border-radius: 3px;
+               font-family: ui-monospace, monospace; }
+  .gate { text-align: center; padding: 40px 16px; color: var(--dim); font-size: 14px; }
+  .gate a { color: var(--brand); }
+  .acts { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="logo" href="index.html">项目主页</a>
+    <div class="nav-links"><a href="index.html">返回首页</a></div>
+    <div id="acctHost" class="acct-host"></div>
+  </div>
+</nav>
+
+<div class="pm-wrap">
+  <div id="gate" class="gate">正在检查登录状态…</div>
+  <div id="body" hidden>
+
+    <!-- ── 站点名与注册 ───────────────────────────────── -->
+    <div class="pm-card">
+      <h2 class="pm-h">站点名与注册</h2>
+      <p class="pm-sub">
+        改名只影响显示。关闭注册后，新用户无法提交申请 ——
+        <b>已有账号不受影响</b>，仍然能正常登录。
+      </p>
+
+      <label class="field-label" for="fName">站点名</label>
+      <input class="field" id="fName" maxlength="40" placeholder="留空表示不修改">
+
+      <div class="sw">
+        <div class="sw-txt">
+          <div class="sw-name">允许新用户注册</div>
+          <div class="sw-desc">关闭后只保留现有账号。邀请码不受此项影响。</div>
+        </div>
+        <input type="checkbox" id="fReg">
+      </div>
+
+      <div class="acts">
+        <button class="btn-primary" id="btnSave">保存</button>
+      </div>
+      <div class="msg" id="mSave"></div>
+    </div>
+
+    <!-- ── 保护密码 ───────────────────────────────────── -->
+    <div class="pm-card">
+      <h2 class="pm-h">保护密码（整站门禁）</h2>
+      <p class="pm-sub">
+        开启后，进站点要先输一次密码；通过后才轮到账号登录。
+        这是<b>账号之外</b>的额外一道门，不是账号密码。
+      </p>
+
+      <div id="gateState" class="state state-off"><span>读取中…</span></div>
+
+      <label class="field-label" for="fPwd">新保护密码（开启时必填）</label>
+      <input class="field" id="fPwd" type="password" autocomplete="new-password"
+             placeholder="建议 8 位以上">
+
+      <div class="acts">
+        <button class="btn-primary" id="btnEnable">开启保护密码</button>
+        <button class="btn-danger" id="btnDisable">关闭保护密码</button>
+      </div>
+      <div class="msg" id="mGate"></div>
+
+      <div class="note">
+        ⚠ <b>开启后当前页面会立刻失效</b>，需要重新输一次新密码 —— 这不是故障，
+        是门禁本来就该拦住没有门禁会话的人（包括你自己的这一个标签页）。
+      </div>
+      <div class="note">
+        ⚠ <b>关闭后再开启必须重设新密码，旧密码找不回来。</b>
+        库里存的是 bcrypt 哈希，清空即永久丢失。
+      </div>
+      <div class="note">
+        ⚠ 关闭保护密码 ≠ 站点裸奔。<b>账号那道门还在</b>：
+        未登录仍然发不了消息、看不了私聊与非公开房间。
+        只是任何人都能打开站点首页了。
+      </div>
+    </div>
+
+    <!-- ── 站长自助解封 ───────────────────────────────── -->
+    <div class="pm-card" id="cardUnban" hidden>
+      <h2 class="pm-h">站长自助解封</h2>
+      <p class="pm-sub">
+        站长账号若被冻结或禁言，没有别人能替你解除 ——
+        所以留这一个自助入口。仅站长本人可用。
+      </p>
+      <div class="acts">
+        <button class="btn-primary" id="btnUnban">解除我的冻结/禁言</button>
+      </div>
+      <div class="msg" id="mUnban"></div>
+    </div>
+
+  </div>
+</div>
+
+<script src="assets/identity.js"></script>
+<script>
+/* ================================================================
+   site.html —— 集群层站点设置（Q-Chat-S-135）
+
+   ★ 这一页是被 rpc-wiring 逼出来的。
+     服务端 site_set / gate_enable / gate_disable / user_self_unban
+     **四个函数早就写好了，但没有任何界面调用过它们**。
+
+     而我此前明确写过两句话：
+       · "gate_disable() / gate_enable(新密码) 两个 RPC 都在，随时能重新开门"
+       · "注册开关 allow_register 还另有控制，说一声我关掉"
+     那两句话**只能通过跑 SQL 兑现**，站长自己在界面里点不到。
+
+     这跟刚删掉的 statePut 是同一类病（看起来有、实际没有），
+     而且是我自己造成的：说了有，界面里没有。
+     一个人若信了"随时能开门"，等真要开时才发现只能找我跑 SQL，
+     那不是"留了退路"，是**把退路说成了退路却没给门**。
+
+   ⚠ 与权限页同样：这里的所有判定只是界面显示，
+     真正的闸门在服务端（site_set / gate_enable 内部各自校验站长）。
+================================================================ */
+
+(function () {
+  'use strict';
+  var SI = window.SiteIdentity;
+  var $ = function (id) { return document.getElementById(id); };
+
+  function msg(el, text, ok) {
+    el.textContent = text || '';
+    el.className = 'msg ' + (text ? (ok ? 'msg-ok' : 'msg-err') : '');
+  }
+
+  /* 门禁状态：必须一眼看出"现在有没有门"。
+     ⚠ 三种状态分开写：hasGate && !gateOff（有门）、gateOff（已关）、都没有（从未设过）。
+     合成"安全/不安全"两种的话，站长分不清"从没设过"和"设过又被我关了"。 */
+  function drawGate(info) {
+    var el = $('gateState');
+    var has = !!info.hasGate, off = !!info.gateOff;
+    var cls, html;
+    if (off) {
+      cls = 'state-off';
+      html = '<b>已关闭</b>　任何人都能打开站点，但仍需账号登录';
+    } else if (has) {
+      cls = 'state-open';
+      html = '<b>已开启</b>　进站需先输保护密码';
+    } else {
+      cls = 'state-off';
+      html = '<b>从未设置</b>　站点直接开放，靠账号登录把关';
+    }
+    el.className = 'state ' + cls;
+    el.innerHTML = html;
+    /* 已关闭时"关闭"按钮没有意义，点了只会报错。
+       ⚠ 不隐藏"开启"按钮 —— 那是站长最可能需要的一个操作。 */
+    $('btnDisable').disabled = !!off;
+  }
+
+  function load() {
+    SI.siteInfo().then(function (r) {
+      if (!r || !r.ok) {
+        msg($('mSave'), '读取站点信息失败：' + ((r && r.err) || '没有权限'), false);
+        return;
+      }
+      $('fName').value = r.siteName || '';
+      $('fReg').checked = r.allowRegister !== false;
+      drawGate(r);
+    }).catch(function (e) {
+      msg($('mSave'), '读取站点信息失败：' + (e && e.message ? e.message : '网络错误'), false);
+    });
+  }
+
+  function bind() {
+    $('btnSave').onclick = function () {
+      var b = this;
+      var name = $('fName').value.trim();
+      b.disabled = true; b.textContent = '保存中…';
+      msg($('mSave'), '');
+      /* ⚠ 空串表示"不改" —— 站点名不允许清空，
+         否则导航条一片空白，用户不知道自己在哪个站。 */
+      SI.siteSet(name || null, $('fReg').checked)
+        .then(function () {
+          msg($('mSave'), '已保存', true);
+          b.disabled = false; b.textContent = '保存';
+          load();
+        })
+        .catch(function (e) {
+          msg($('mSave'), '保存失败：' + (e && e.message ? e.message : '没有权限'), false);
+          b.disabled = false; b.textContent = '保存';
+        });
+    };
+
+    $('btnEnable').onclick = function () {
+      var b = this;
+      var pwd = $('fPwd').value;
+      /* ⚠ 必须至少 8 位，且要**明确说出来**。
+         不设下限的话，站长随手设个 "1"，等于给整站挂了一把一秒就能撬开的锁，
+         而界面上还显示"已开启"，看着是安全的。 */
+      if (!pwd || pwd.length < 8) {
+        msg($('mGate'), '请填写至少 8 位的新保护密码', false);
+        return;
+      }
+      b.disabled = true; b.textContent = '开启中…';
+      msg($('mGate'), '');
+      SI.gateEnable(pwd).then(function () {
+        /* 开启成功后当前会话没有门禁票据 —— 提示去重新输一次，
+           而不是留在这里让人以为失败了。 */
+        msg($('mGate'), '已开启。当前页面需要重新验证，请刷新后输入新密码。', true);
+        b.disabled = false; b.textContent = '开启保护密码';
+        load();
+      }).catch(function (e) {
+        msg($('mGate'), '开启失败：' + (e && e.message ? e.message : '没有权限'), false);
+        b.disabled = false; b.textContent = '开启保护密码';
+      });
+    };
+
+    $('btnDisable').onclick = function () {
+      var b = this;
+      /* ⚠ 二次确认：这一步会让整站从"有门"变成"无门"，
+         而界面上看不出太大变化（账号登录那道还在），
+         所以很容易被当成"取消了一个没用的设置"。 */
+      if (!window.confirm('确定关闭保护密码？\n\n关闭后任何人都能打开站点首页。\n账号登录仍然保留。')) return;
+      b.disabled = true; b.textContent = '关闭中…';
+      msg($('mGate'), '');
+      SI.gateDisable().then(function () {
+        msg($('mGate'), '已关闭，站点现在直接开放。', true);
+        b.disabled = false; b.textContent = '关闭保护密码';
+        load();
+      }).catch(function (e) {
+        msg($('mGate'), '关闭失败：' + (e && e.message ? e.message : '没有权限'), false);
+        b.disabled = false; b.textContent = '关闭保护密码';
+      });
+    };
+
+    $('btnUnban').onclick = function () {
+      var b = this;
+      b.disabled = true; b.textContent = '处理中…';
+      msg($('mUnban'), '');
+      SI.selfUnban().then(function () {
+        msg($('mUnban'), '已解除', true);
+        b.disabled = false; b.textContent = '解除我的冻结/禁言';
+        $('cardUnban').hidden = true;
+      }).catch(function (e) {
+        msg($('mUnban'), '失败：' + (e && e.message ? e.message : '仅站长可用'), false);
+        b.disabled = false; b.textContent = '解除我的冻结/禁言';
+      });
+    };
+  }
+
+  SI.ready.then(function (st) {
+    if (!st || !st.ok) {
+      $('gate').innerHTML = st && st.offline
+        ? '连不上服务器，无法加载设置。'
+        : '需要先登录。<a href="login.html?next=' +
+          encodeURIComponent('site.html') + '">去登录 →</a>';
+      return;
+    }
+    /* 站点设置比权限更敏感，只给站长。
+       ⚠ 同样：这里只是不显示，真正的闸门在服务端各函数内部。 */
+    if (st.role !== 'owner') {
+      $('gate').innerHTML = '站点设置仅站长可见。';
+      return;
+    }
+    $('gate').hidden = true;
+    $('body').hidden = false;
+    bind();
+    load();
+
+    /* 自助解封卡片只在站长自己处于非正常状态时出现。
+       ⚠ 平时隐藏：一个"解除冻结"的按钮一直摆在那儿，
+       只会让人疑心账号有问题。 */
+    if (st.status && st.status !== 'active') $('cardUnban').hidden = false;
+  });
+
+  SI.mount($('acctHost'));
+})();
+</script>
+</body>
+</html>

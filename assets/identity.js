@@ -253,6 +253,47 @@
   /** 权限点清单（按项目分组）。仅管理员/站长可用。 */
   function listPerms() { return rpc('acl_perms_list', {}); }
 
+  /* ---------------- 站点设置（Q-Chat-S-135）----------------
+     ★ 这三个以前**只有服务端函数、没有任何界面调用**（rpc-wiring 抓出）。
+       而我此前明确写过"随时能重新开门""注册开关另有控制，说一声我关掉"——
+       **那两句话其实只能通过跑 SQL 兑现**，站长自己点不到。
+
+       这跟刚删掉的 statePut 是同一类病（看起来有、实际没有），
+       而且是我自己造成的：说了有，界面里没有。
+       一个人若真信了"随时能开门"，等真要开时才发现只能找我跑 SQL，
+       那就不是"方便"，是**把退路说成了退路但没给门**。 */
+
+  /** 站点公开信息。管理员/站长额外拿到 allowRegister 与门禁状态。 */
+  function siteInfo() { return rpc('site_info', {}); }
+
+  /** 改站点名 / 开关注册。仅站长。空表示不改。 */
+  function siteSet(name, allowRegister) {
+    var b = {};
+    if (name !== null && name !== undefined) b.p_name = name;
+    if (allowRegister !== null && allowRegister !== undefined) b.p_allow_register = !!allowRegister;
+    return rpc('site_set', b);
+  }
+
+  /**
+   * 开启保护密码（重新上锁）。
+   * ⚠ 开启后，所有没有有效门禁会话的人都会被挡在外面 ——
+   *   包括主页自己当前这个标签页（要重新输密码）。这不是故障。
+   * ⚠ 旧密码**找不回来**：库里存的是 bcrypt 哈希，清空即永久丢失。
+   *   所以是"设一个新密码"，不是"恢复旧密码"。
+   */
+  function gateEnable(pwd) { return rpc('gate_enable', { p: pwd }); }
+
+  /** 关闭保护密码。仅站长。关闭后任何人都能进站点（但仍需账号登录）。 */
+  function gateDisable() { return rpc('gate_disable', {}); }
+
+  /** 自助解封（被冻结的账号自己解冻）。 */
+  function selfUnban() { return rpc('user_self_unban', {}); }
+
+  /** 判定原因（为什么能/不能），比 can 多一句人话。用于权限页自测区。 */
+  function why(perm, user) {
+    return rpc('acl_why', { p_perm: perm, p_room: null, p_user: user || null });
+  }
+
   /**
    * 上传头像到公共 storage。
    * ⚠ 走 media bucket，和聊天室共用 —— 不另开一个，
@@ -469,6 +510,12 @@
     can: can,
     perm: perm,
     listPerms: listPerms,
+    why: why,
+    siteInfo: siteInfo,
+    siteSet: siteSet,
+    gateEnable: gateEnable,
+    gateDisable: gateDisable,
+    selfUnban: selfUnban,
     profileUpdate: profileUpdate,
     changePassword: changePassword,
     listUsers: listUsers,
