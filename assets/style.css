@@ -116,7 +116,23 @@ h2{font-size:20px;margin:0 0 14px;padding-left:10px;border-left:4px solid var(--
 .foot a{color:var(--dim)}
 
 @media(max-width:720px){
-  .nav-inner{gap:10px;height:52px}
+  /* ⚠ Q-Site-S-139：原来这里只写了 gap 与 height，
+     六个链接（项目/关于本站/手册/账号/权限/站点设置）仍被塞进同一行。
+     实测 360px 视口下：nav-links 被压到 248px 宽、六个链接各 38px，
+     "站点设置"四字在 38px 里必然溢出；nav-links 实际高 110px
+     而 nav-inner 只有 52px —— 子元素向上溢出 y=-29，跑到可视区外。
+     页面还因此产生横向滚动（scrollWidth 390 > 视口 360），能左右拖。
+
+     ★ 修法：链接另起一行，横向可滑动。
+       为什么不用汉堡菜单：那要写 JS、要管展开收起与点击外部关闭，
+       而这个导航只有六个纯链接 —— 横向滑动更简单也更不容易坏。
+       为什么不让它们换行成两三行：那会把内容区顶下去一大截，
+       导航条占掉半个屏幕，比横向滑动难看得多。 */
+  .nav-inner{gap:10px;height:auto;min-height:52px;flex-wrap:wrap;padding:8px 12px;row-gap:6px}
+  .nav-links{order:3;flex:1 0 100%;overflow-x:auto;flex-wrap:nowrap;
+    -webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:2px}
+  .nav-links::-webkit-scrollbar{display:none}
+  .nav-links a{flex:none;white-space:nowrap}
   .hero{padding:32px 20px}
   .hero h1{font-size:24px}
   .wrap{padding:18px 12px 40px}
