@@ -259,6 +259,142 @@ body.dark .card-src:hover { background: rgba(255,255,255,.08); }
   .who { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
   .offline-note { font-size: 12px; color: #8a6100; background: #fff3cd;
                   border-radius: 6px; padding: 8px 10px; margin-bottom: 14px; line-height: 1.6; }
+
+/* ==========================================================================
+   fx-plus.css · 视觉效果增强
+   全部引用自样式库：liuyiming2024/css_effect_map_collection
+     · 毛玻璃效果/index.html    → backdrop-filter 毛玻璃顶栏 / 浮层
+     · 滚动指示器/index.html    → 顶部滚动进度条
+     · css边框四角/index.html   → 卡片四角装饰线
+     · 纯css气泡背景/index.css  → Hero 区上浮气泡背景
+
+   设计约束：
+     1. 只做「追加」，不改动站点原有任何一条规则；
+     2. 不接管主题 —— 各站点已有自己的亮暗方案（Cloud / Code 用
+        [data-theme="dark"]，Chat / 主页用 body.dark），本文件只对
+        这两种写法各补一份深色取值，不新增第三套机制；
+     3. 效果所需 DOM 由 fx-plus.js 注入，不要求改页面结构。
+   ========================================================================== */
+
+/* ---------- 1. 毛玻璃效果（样式库：毛玻璃效果/index.html）---------- */
+/* 顶栏 / 导航：半透明 + 背景模糊，滚动时内容从下方透出 */
+.nav, #topbar, .glass {
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  backdrop-filter: blur(20px) saturate(160%);
+  background: rgba(255, 255, 255, .72);
+}
+/* 侧栏与浮层用弱一档的模糊 */
+.sidebar, #sidebar, .modal, .dropdown {
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+}
+/* 深色取值：同时兼容 [data-theme="dark"] 与 body.dark 两种既有写法 */
+html[data-theme="dark"] .nav,
+html[data-theme="dark"] #topbar,
+html[data-theme="dark"] .glass,
+body.dark .nav,
+body.dark #topbar,
+body.dark .glass {
+  background: rgba(23, 27, 34, .72);
+}
+html[data-theme="dark"] .sidebar,
+html[data-theme="dark"] #sidebar,
+html[data-theme="dark"] .modal,
+html[data-theme="dark"] .dropdown,
+body.dark .sidebar,
+body.dark #sidebar,
+body.dark .modal,
+body.dark .dropdown {
+  background: rgba(23, 27, 34, .88);
+}
+
+/* ---------- 2. 滚动指示器（样式库：滚动指示器/index.html）---------- */
+#scroll-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 3px;
+  width: 0;
+  z-index: 9999;
+  background: linear-gradient(90deg, var(--brand, #3b7ff2), #7ee787);
+  pointer-events: none;
+  transition: width .08s linear;
+}
+
+/* ---------- 3. CSS 边框四角（样式库：css边框四角/index.html）---------- */
+/* 伪元素实现四角各画两条 1px 短线，不需要改 DOM */
+.corner-box { position: relative; }
+.corner-box::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  --c: var(--brand, #3b7ff2);
+  background:
+    linear-gradient(var(--c), var(--c)) 0    0    / 14px 1px no-repeat,
+    linear-gradient(var(--c), var(--c)) 0    0    / 1px 14px no-repeat,
+    linear-gradient(var(--c), var(--c)) 100% 0    / 14px 1px no-repeat,
+    linear-gradient(var(--c), var(--c)) 100% 0    / 1px 14px no-repeat,
+    linear-gradient(var(--c), var(--c)) 0    100% / 14px 1px no-repeat,
+    linear-gradient(var(--c), var(--c)) 0    100% / 1px 14px no-repeat,
+    linear-gradient(var(--c), var(--c)) 100% 100% / 14px 1px no-repeat,
+    linear-gradient(var(--c), var(--c)) 100% 100% / 1px 14px no-repeat;
+  opacity: .5;
+  transition: opacity .2s ease;
+}
+.corner-box:hover::before { opacity: 1; }
+
+/* ---------- 4. 纯 CSS 气泡背景（样式库：纯css气泡背景/index.css）---------- */
+.hero { position: relative; overflow: hidden; }
+.bubble-bgwall {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  list-style: none;
+  pointer-events: none;
+  z-index: 0;
+}
+.bubble-bgwall li {
+  position: absolute;
+  bottom: -60px;
+  display: block;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background-color: rgba(59, 127, 242, .16);
+  animation: bubble-up 16s linear infinite;
+}
+html[data-theme="dark"] .bubble-bgwall li,
+body.dark .bubble-bgwall li { background-color: rgba(125, 179, 255, .20); }
+
+.bubble-bgwall li:nth-child(1)  { left: 10%; animation-duration: 15s; }
+.bubble-bgwall li:nth-child(2)  { left: 20%; width: 34px; height: 34px; animation-duration: 11s; animation-delay: 2s; }
+.bubble-bgwall li:nth-child(3)  { left: 25%; animation-duration: 13s; animation-delay: 4s; }
+.bubble-bgwall li:nth-child(4)  { left: 40%; width: 28px; height: 28px; animation-duration: 9s; }
+.bubble-bgwall li:nth-child(5)  { left: 70%; animation-duration: 14s; animation-delay: 1s; }
+.bubble-bgwall li:nth-child(6)  { left: 80%; width: 40px; height: 40px; animation-duration: 12s; animation-delay: 3s; }
+.bubble-bgwall li:nth-child(7)  { left: 32%; width: 46px; height: 46px; animation-duration: 17s; animation-delay: 2s; }
+.bubble-bgwall li:nth-child(8)  { left: 55%; width: 18px; height: 18px; animation-duration: 15s; animation-delay: 4s; }
+.bubble-bgwall li:nth-child(9)  { left: 25%; width: 20px; height: 20px; animation-duration: 12s; animation-delay: 2s; }
+.bubble-bgwall li:nth-child(10) { left: 85%; width: 44px; height: 44px; animation-duration: 16s; animation-delay: 5s; }
+
+@keyframes bubble-up {
+  0%   { opacity: 0;   transform: translateY(0)      rotate(0deg); }
+  15%  { opacity: .65; }
+  50%  { opacity: .85; transform: translateY(-55vh)  rotate(90deg); }
+  100% { opacity: 0;   transform: translateY(-110vh) rotate(180deg); }
+}
+/* 让 Hero 里原有内容浮在气泡之上 */
+.hero > *:not(.bubble-bgwall) { position: relative; z-index: 1; }
+
+/* ---------- 5. 尊重系统的减弱动效偏好 ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .bubble-bgwall { display: none; }
+  .corner-box::before { transition: none; }
+}
+
 </style>
 </head>
 <body>
@@ -445,6 +581,77 @@ body.dark .card-src:hover { background: rgba(255,255,255,.08); }
   });
   SI.mount(document.getElementById('acctHost'));
 })();
+</script>
+<script>
+/* ==========================================================================
+   fx-plus.js · 为 fx-plus.css 注入效果所需 DOM
+   引用自样式库：liuyiming2024/css_effect_map_collection
+     · 滚动指示器  → 顶部进度条
+     · 纯css气泡背景 → Hero 区气泡 <ul><li>
+     · css边框四角  → 给 .card 加 .corner-box
+
+   刻意不碰主题：各站点已有自己的亮暗切换（Cloud / Code 用
+   [data-theme="dark"]，Chat / 主页用 body.dark），这里不接管、
+   不创建第二个切换按钮、不写 localStorage 的主题键。
+   ========================================================================== */
+(function () {
+  "use strict";
+
+  function boot() {
+    injectProgressBar();
+    injectBubbles();
+    markCorners();
+    bindScroll();
+  }
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", boot);
+  } else {
+    boot();
+  }
+
+  /* ---- 滚动指示器（样式库：滚动指示器） ---- */
+  function injectProgressBar() {
+    if (document.getElementById("scroll-progress")) return;
+    var bar = document.createElement("div");
+    bar.id = "scroll-progress";
+    document.body.appendChild(bar);
+  }
+  function bindScroll() {
+    var bar = document.getElementById("scroll-progress");
+    if (!bar) return;
+    var ticking = false;
+    function update() {
+      var h = document.documentElement.scrollHeight - window.innerHeight;
+      var pct = h > 0 ? Math.min(100, (window.scrollY / h) * 100) : 0;
+      bar.style.width = pct.toFixed(2) + "%";
+      ticking = false;
+    }
+    function onScroll() {
+      if (!ticking) { ticking = true; window.requestAnimationFrame(update); }
+    }
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll, { passive: true });
+    update();
+  }
+
+  /* ---- 气泡背景（样式库：纯css气泡背景） ---- */
+  function injectBubbles() {
+    var hero = document.querySelector(".hero");
+    if (!hero || hero.querySelector(".bubble-bgwall")) return;
+    var ul = document.createElement("ul");
+    ul.className = "bubble-bgwall";
+    ul.setAttribute("aria-hidden", "true");
+    for (var i = 0; i < 10; i++) ul.appendChild(document.createElement("li"));
+    hero.insertBefore(ul, hero.firstChild);
+  }
+
+  /* ---- 四角装饰（样式库：css边框四角），只作用于卡片 ---- */
+  function markCorners() {
+    var cards = document.querySelectorAll(".card");
+    for (var i = 0; i < cards.length; i++) cards[i].classList.add("corner-box");
+  }
+})();
+
 </script>
 </body>
 </html>
