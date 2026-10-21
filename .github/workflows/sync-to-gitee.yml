@@ -1,0 +1,38 @@
+# GitHub -> Gitee 单向镜像同步（8 仓库通用，无需修改）
+name: Sync to Gitee
+
+on:
+  push:
+    branches: ["**"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  mirror:
+    name: Mirror to Gitee
+    runs-on: ubuntu-latest
+    concurrency:
+      group: gitee-mirror
+      cancel-in-progress: false
+    steps:
+      - name: 解析仓库名
+        id: vars
+        run: echo "name=$(basename '${{ github.repository }}')" >> "$GITHUB_OUTPUT"
+
+      - name: 从 GitHub 裸克隆（含全部分支与标签）
+        run: |
+          git clone --bare \
+            "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" \
+            repo.git
+
+      - name: 全量镜像推送到 Gitee
+        working-directory: repo.git
+        run: |
+          git remote add gitee \
+            "https://${{ secrets.GITEE_USERNAME }}:${{ secrets.GITEE_TOKEN }}@gitee.com/${{ secrets.GITEE_USERNAME }}/${{ steps.vars.outputs.name }}.git"
+          git push gitee --mirror --force
+
+      - name: 结果
+        run: echo "::notice::${{ github.repository }} -> gitee.com/${{ secrets.GITEE_USERNAME }}/${{ steps.vars.outputs.name }}"
