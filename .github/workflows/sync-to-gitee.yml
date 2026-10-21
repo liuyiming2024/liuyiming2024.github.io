@@ -1,4 +1,5 @@
 # GitHub -> Gitee 单向镜像同步（8 仓库通用，无需修改）
+# 自动能力：反查 Gitee 真实用户名 / 仓库不存在则自动创建 / 失败时写入诊断日志
 name: Sync to Gitee
 
 on:
@@ -7,32 +8,108 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   mirror:
     name: Mirror to Gitee
+    # 诊断日志分支不触发，避免死循环
+    if: github.ref != 'refs/heads/mirror-debug'
     runs-on: ubuntu-latest
     concurrency:
       group: gitee-mirror
       cancel-in-progress: false
+    env:
+      NAME: ${{ github.event.repository.name }}
+      IS_PRIVATE: ${{ github.event.repository.private }}
     steps:
-      - name: 解析仓库名
-        id: vars
-        run: echo "name=$(basename '${{ github.repository }}')" >> "$GITHUB_OUTPUT"
-
       - name: 从 GitHub 裸克隆（含全部分支与标签）
         run: |
           git clone --bare \
             "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" \
             repo.git
 
-      - name: 全量镜像推送到 Gitee
-        working-directory: repo.git
+      - name: 反查 Gitee 用户名
+        id: who
         run: |
-          git remote add gitee \
-            "https://${{ secrets.GITEE_USERNAME }}:${{ secrets.GITEE_TOKEN }}@gitee.com/${{ secrets.GITEE_USERNAME }}/${{ steps.vars.outputs.name }}.git"
-          git push gitee --mirror --force
+          set -e
+          RESP=$(curl -s -m 30 "https://gitee.com/api/v5/user?access_token=${{ secrets.GITEE_TOKEN }}")
+          echo "user api: ${RESP:0:200}"
+          LOGIN=$(echo "$RESP" | python3 -c "import sys,json;print(json.load(sys.stdin).get('login',''))" 2>/dev/null || true)
+          if [ -z "$LOGIN" ]; then
+            LOGIN="${{ secrets.GITEE_USERNAME }}"
+            echo "::warning::无法反查用户名，回退到 secret: $LOGIN"
+          fi
+          if [ -z "$LOGIN" ]; then echo "::error::Gitee 用户名解析失败"; exit 1; fi
+          echo "login=$LOGIN" >> "$GITHUB_OUTPUT"
 
-      - name: 结果
-        run: echo "::notice::${{ github.repository }} -> gitee.com/${{ secrets.GITEE_USERNAME }}/${{ steps.vars.outputs.name }}"
+      - name: 确保 Gitee 仓库存在（不存在则创建）
+        run: |
+          set -e
+          U="${{ steps.who.outputs.login }}"
+          echo "target owner: $U"
+          CODE=$(curl -s -m 30 -o /dev/null -w '%{http_code}' \
+            "https://gitee.com/api/v5/repos/$U/$NAME?access_token=${{ secrets.GITEE_TOKEN }}")
+          echo "repo check: $CODE"
+          if [ "$CODE" != "200" ]; then
+            echo "仓库不存在，创建中..."
+            curl -s -m 60 -X POST "https://gitee.com/api/v5/user/repos" \
+              -H "Content-Type: application/json" \
+              -d "{\"access_token\":\"${{ secrets.GITEE_TOKEN }}\",\"name\":\"$NAME\",\"private\":$IS_PRIVATE,\"auto_init\":false,\"description\":\"mirror of ${{ github.repository }}\"}"
+            echo
+            sleep 3
+          fi
+
+      - name: 全量镜像推送到 Gitee
+        id: push
+        working-directory: repo.git
+        continue-on-error: true
+        run: |
+          U="${{ steps.who.outputs.login }}"
+          {
+            echo "== target: https://gitee.com/$U/$NAME.git"
+            git remote add gitee "https://$U:${{ secrets.GITEE_TOKEN }}@gitee.com/$U/$NAME.git"
+            git push gitee --mirror --force
+          } 2>&1 | tee /tmp/push.log
+
+      - name: 判定结果
+        if: steps.push.outcome == 'failure'
+        run: |
+          echo "::error::Gitee 推送失败，详情如下"
+          cat /tmp/push.log
+          exit 1
+
+      - name: 成功提示
+        run: echo "::notice::${{ github.repository }} -> https://gitee.com/${{ steps.who.outputs.login }}/$NAME"
+
+      # ---- 诊断：失败时把日志写进 mirror-debug 分支，便于外部读取 ----
+      - name: 保存诊断日志
+        if: failure()
+        run: |
+          mkdir -p dbg
+          {
+            echo "repo:    ${{ github.repository }}"
+            echo "run:     ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            echo "time:    $(date -u '+%F %T UTC')"
+            echo "--- push.log ---"
+            cat /tmp/push.log 2>/dev/null || echo "(无 push.log)"
+          } > "dbg/${NAME}.log"
+
+      - name: 提交诊断日志
+        if: failure()
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout --orphan mirror-debug 2>/dev/null || git checkout mirror-debug
+          git rm -rf . --quiet 2>/dev/null || true
+          mkdir -p dbg
+          {
+            echo "repo:    ${{ github.repository }}"
+            echo "run:     ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            echo "time:    $(date -u '+%F %T UTC')"
+            echo "--- push.log ---"
+            cat /tmp/push.log 2>/dev/null || echo "(无 push.log)"
+          } > "dbg/${NAME}.log"
+          git add dbg
+          git commit -m "diag: mirror failure ${NAME} run ${{ github.run_id }}"
+          git push --force origin mirror-debug
