@@ -260,6 +260,7 @@ body.dark .card-src:hover { background: rgba(255,255,255,.08); }
           padding: 10px 14px; border-radius: 0 6px 6px 0; }
   .note code { font-family: ui-monospace, monospace; }
 
+/* FX-PLUS-BEGIN */
 /* ==========================================================================
    fx-plus.css · 视觉效果增强
    全部引用自样式库：liuyiming2024/css_effect_map_collection
@@ -277,13 +278,38 @@ body.dark .card-src:hover { background: rgba(255,255,255,.08); }
    ========================================================================== */
 
 /* ---------- 1. 毛玻璃效果（样式库：毛玻璃效果/index.html）---------- */
-/* 顶栏 / 导航：半透明 + 背景模糊，滚动时内容从下方透出 */
+
+/* ⚠⚠ 这一段踩过一个真实的坑，删掉前务必先读：
+   最初把 backdrop-filter 加在 #topbar 上，结果右上角「新建文件」菜单
+   被侧栏盖住了 —— 点了没反应、被文件树遮在下面。
+
+   根因：backdrop-filter 和 filter / transform 一样，会给元素同时创建
+   ① 层叠上下文  ② 绝对定位后代的包含块。
+   .top-menu 是 #topbar 的子元素，它的 z-index:60 本来是相对【根层叠
+   上下文】算的（所以盖得住 z-index:55 的侧栏）；#topbar 一变成层叠上下
+   文，这个 60 就被关在了 #topbar 内部，而 #topbar 自己在根上下文里相当
+   于 0 —— 于是整个顶栏子树掉到侧栏下面。
+   实测（Chromium + elementFromPoint）：
+     加 backdrop-filter 前，菜单中心命中 BUTTON；加之后命中侧栏的 .name。
+
+   修法：给 #topbar 显式 position + z-index，把整个顶栏子树抬回 60
+   —— 正好是 .top-menu 原本的层级，相对顺序与改动前一致。
+   注意：只加 position:relative 不够，z-index:auto 不抬层级，实测仍被盖。
+
+   同类排查清单：以后给任何容器加 backdrop-filter / filter / transform /
+   will-change 前，先确认它里面没有需要"浮出"去盖别的元素的子节点。 */
+
 .nav, #topbar, .glass {
   -webkit-backdrop-filter: blur(20px) saturate(160%);
   backdrop-filter: blur(20px) saturate(160%);
   background: rgba(255, 255, 255, .72);
 }
-/* 侧栏与浮层用弱一档的模糊 */
+/* Code 的顶栏原本是 position:static、无 z-index，必须显式抬层级 */
+#topbar {
+  position: relative;
+  z-index: 60;
+}
+/* 侧栏与浮层用弱一档的模糊（这些本来就是浮层，不存在"关住子节点"的问题） */
 .sidebar, #sidebar, .modal, .dropdown {
   -webkit-backdrop-filter: blur(14px);
   backdrop-filter: blur(14px);
@@ -329,6 +355,7 @@ body.dark .dropdown {
   position: absolute;
   inset: 0;
   pointer-events: none;
+  border-radius: inherit;
   --c: var(--brand, #3b7ff2);
   background:
     linear-gradient(var(--c), var(--c)) 0    0    / 14px 1px no-repeat,
@@ -356,6 +383,10 @@ body.dark .dropdown {
   pointer-events: none;
   z-index: 0;
 }
+/* ⚠ 第一版填充只有 .16 透明度的蓝，实测在浅色底上几乎看不见 ——
+   白底 + 16% 蓝算出来的实际反差低于肉眼可辨阈值，等于白做。
+   所以填充提到 .38，并加一道同色内描边：气泡上升时会经过文字后方，
+   纯色块容易和文字糊在一起，有描边才有清晰的轮廓。 */
 .bubble-bgwall li {
   position: absolute;
   bottom: -60px;
@@ -363,11 +394,16 @@ body.dark .dropdown {
   width: 22px;
   height: 22px;
   border-radius: 6px;
-  background-color: rgba(59, 127, 242, .16);
+  background-color: rgba(59, 127, 242, .38);
+  box-shadow: inset 0 0 0 1px rgba(59, 127, 242, .55);
   animation: bubble-up 16s linear infinite;
 }
+/* 深色底反过来：气泡要比背景亮才看得见，换成更亮的蓝 */
 html[data-theme="dark"] .bubble-bgwall li,
-body.dark .bubble-bgwall li { background-color: rgba(125, 179, 255, .20); }
+body.dark .bubble-bgwall li {
+  background-color: rgba(125, 179, 255, .30);
+  box-shadow: inset 0 0 0 1px rgba(125, 179, 255, .48);
+}
 
 .bubble-bgwall li:nth-child(1)  { left: 10%; animation-duration: 15s; }
 .bubble-bgwall li:nth-child(2)  { left: 20%; width: 34px; height: 34px; animation-duration: 11s; animation-delay: 2s; }
@@ -389,11 +425,68 @@ body.dark .bubble-bgwall li { background-color: rgba(125, 179, 255, .20); }
 /* 让 Hero 里原有内容浮在气泡之上 */
 .hero > *:not(.bubble-bgwall) { position: relative; z-index: 1; }
 
-/* ---------- 5. 尊重系统的减弱动效偏好 ---------- */
+/* ---------- 5. 浮出面板：毛玻璃 + 四角 + 入场动画 ---------- */
+/* 只作用于"自己本来就在最上层"的浮出面板。
+   这里加 transform / backdrop-filter 是安全的：它们是层叠的终点，
+   内部没有还要再往外浮的子节点（对比上面 #topbar 那个坑）。
+   入场动画参考样式库「实现modal弹框动画」的位移+淡入思路。 */
+.top-menu,
+.modal-box,
+.dropdown {
+  -webkit-backdrop-filter: blur(18px) saturate(170%);
+  backdrop-filter: blur(18px) saturate(170%);
+}
+html[data-theme="dark"] .top-menu,
+html[data-theme="dark"] .modal-box,
+html[data-theme="dark"] .dropdown,
+body.dark .top-menu,
+body.dark .modal-box,
+body.dark .dropdown {
+  background: rgba(23, 27, 34, .88);
+}
+
+/* 四角装饰直接画在浮出面板上（不必等 JS 加 .corner-box） */
+.top-menu::before,
+.modal-box::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  --c: var(--brand, #3b7ff2);
+  background:
+    linear-gradient(var(--c), var(--c)) 0    0    / 12px 1px no-repeat,
+    linear-gradient(var(--c), var(--c)) 0    0    / 1px 12px no-repeat,
+    linear-gradient(var(--c), var(--c)) 100% 0    / 12px 1px no-repeat,
+    linear-gradient(var(--c), var(--c)) 100% 0    / 1px 12px no-repeat,
+    linear-gradient(var(--c), var(--c)) 0    100% / 12px 1px no-repeat,
+    linear-gradient(var(--c), var(--c)) 0    100% / 1px 12px no-repeat,
+    linear-gradient(var(--c), var(--c)) 100% 100% / 12px 1px no-repeat,
+    linear-gradient(var(--c), var(--c)) 100% 100% / 1px 12px no-repeat;
+  opacity: .45;
+}
+
+@keyframes fx-pop-in {
+  from { opacity: 0; transform: translateY(-6px) scale(.985); }
+  to   { opacity: 1; transform: none; }
+}
+.top-menu.open,
+.modal-box,
+.dropdown {
+  animation: fx-pop-in .16s ease-out;
+}
+
+/* ---------- 6. 尊重系统的减弱动效偏好 ---------- */
 @media (prefers-reduced-motion: reduce) {
   .bubble-bgwall { display: none; }
-  .corner-box::before { transition: none; }
+  .corner-box::before,
+  .top-menu::before,
+  .modal-box::before { transition: none; }
+  .top-menu.open,
+  .modal-box,
+  .dropdown { animation: none; }
 }
+/* FX-PLUS-END */
 
 </style>
 </head>
